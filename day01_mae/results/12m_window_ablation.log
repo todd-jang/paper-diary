@@ -1,0 +1,139 @@
+[device] mps
+[config] windows = [0.5, 1.0, 2.0, 3.0, 5.0, 10.0]
+[config] hop_ratio = 0.5
+
+[1] AST 로드 + 템플릿 학습
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 5303.11it/s]
+[transformers] [1mASTModel LOAD REPORT[0m from: MIT/ast-finetuned-audioset-10-10-0.4593
+Key                         | Status     |  | 
+----------------------------+------------+--+-
+classifier.layernorm.bias   | UNEXPECTED |  | 
+classifier.layernorm.weight | UNEXPECTED |  | 
+classifier.dense.weight     | UNEXPECTED |  | 
+classifier.dense.bias       | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+  siren_template: 3, road_template: 2
+
+[2] 윈도우별 프레임 score
+
+  [window=0.5s, hop=0.25s, target_len=1024]
+    C01/untouched: N=59, mean=+0.0730, std=0.0583, min=-0.0117, max=+0.1926
+    C01/with_siren: N=59, mean=+0.1596, std=0.0136, min=+0.1291, max=+0.1961
+    C02/untouched: N=59, mean=+0.1510, std=0.0143, min=+0.1174, max=+0.1878
+    C02/with_siren: N=59, mean=+0.1620, std=0.0154, min=+0.1267, max=+0.1841
+    C04/untouched: N=59, mean=+0.0356, std=0.0398, min=-0.0463, max=+0.1283
+    C04/with_siren: N=59, mean=+0.1924, std=0.0101, min=+0.1753, max=+0.2232
+    T09/untouched: N=59, mean=+0.1592, std=0.0520, min=+0.0101, max=+0.2209
+
+  [window=1.0s, hop=0.5s, target_len=1024]
+    C01/untouched: N=29, mean=-0.0817, std=0.0789, min=-0.1841, max=+0.0802
+    C01/with_siren: N=29, mean=+0.1357, std=0.0087, min=+0.1160, max=+0.1638
+    C02/untouched: N=29, mean=+0.0597, std=0.0256, min=-0.0043, max=+0.0985
+    C02/with_siren: N=29, mean=+0.1533, std=0.0118, min=+0.1320, max=+0.1745
+    C04/untouched: N=29, mean=-0.1619, std=0.0382, min=-0.2090, max=-0.0941
+    C04/with_siren: N=29, mean=+0.1376, std=0.0086, min=+0.1211, max=+0.1540
+    T09/untouched: N=29, mean=+0.0666, std=0.0749, min=-0.0907, max=+0.2182
+
+  [window=2.0s, hop=1.0s, target_len=1024]
+    C01/untouched: N=14, mean=-0.2592, std=0.0926, min=-0.3669, max=-0.0720
+    C01/with_siren: N=14, mean=+0.0876, std=0.0218, min=+0.0541, max=+0.1193
+    C02/untouched: N=14, mean=-0.0971, std=0.0270, min=-0.1478, max=-0.0644
+    C02/with_siren: N=14, mean=+0.1221, std=0.0087, min=+0.1104, max=+0.1387
+    C04/untouched: N=14, mean=-0.2639, std=0.0330, min=-0.3159, max=-0.2110
+    C04/with_siren: N=14, mean=-0.0129, std=0.0100, min=-0.0288, max=+0.0083
+    T09/untouched: N=14, mean=-0.0482, std=0.0559, min=-0.1673, max=+0.0406
+
+  [window=3.0s, hop=1.5s, target_len=1024]
+    C01/untouched: N=9, mean=-0.3617, std=0.0702, min=-0.4371, max=-0.2039
+    C01/with_siren: N=9, mean=+0.0551, std=0.0312, min=+0.0139, max=+0.0910
+    C02/untouched: N=9, mean=-0.2118, std=0.0246, min=-0.2519, max=-0.1768
+    C02/with_siren: N=9, mean=+0.0909, std=0.0050, min=+0.0826, max=+0.0984
+    C04/untouched: N=9, mean=-0.3139, std=0.0545, min=-0.3704, max=-0.2003
+    C04/with_siren: N=9, mean=-0.0760, std=0.0076, min=-0.0904, max=-0.0656
+    T09/untouched: N=9, mean=-0.0879, std=0.0253, min=-0.1193, max=-0.0489
+
+  [window=5.0s, hop=2.5s, target_len=1024]
+    C01/untouched: N=5, mean=-0.4681, std=0.0269, min=-0.5099, max=-0.4370
+    C01/with_siren: N=5, mean=-0.0081, std=0.0350, min=-0.0538, max=+0.0357
+    C02/untouched: N=5, mean=-0.3292, std=0.0150, min=-0.3521, max=-0.3069
+    C02/with_siren: N=5, mean=+0.0290, std=0.0040, min=+0.0239, max=+0.0346
+    C04/untouched: N=5, mean=-0.3489, std=0.0510, min=-0.4004, max=-0.2697
+    C04/with_siren: N=5, mean=-0.1100, std=0.0054, min=-0.1203, max=-0.1048
+    T09/untouched: N=5, mean=-0.1337, std=0.0239, min=-0.1701, max=-0.0988
+
+  [window=10.0s, hop=5.0s, target_len=1024]
+    C01/untouched: N=2, mean=-0.5388, std=0.0122, min=-0.5510, max=-0.5266
+    C01/with_siren: N=2, mean=-0.0800, std=0.0056, min=-0.0857, max=-0.0744
+    C02/untouched: N=2, mean=-0.4187, std=0.0093, min=-0.4279, max=-0.4094
+    C02/with_siren: N=2, mean=-0.0566, std=0.0044, min=-0.0610, max=-0.0523
+    C04/untouched: N=2, mean=-0.4239, std=0.0169, min=-0.4407, max=-0.4070
+    C04/with_siren: N=2, mean=-0.1320, std=0.0017, min=-0.1338, max=-0.1303
+    T09/untouched: N=2, mean=-0.2114, std=0.0041, min=-0.2155, max=-0.2073
+
+======================================================================
+[3] 윈도우별 분리도
+======================================================================
+  window    pos_mean    neg_mean       gap     pos_min     neg_max     overlap
+--------------------------------------------------------------------------------
+     0.5     +0.1713     +0.1047   +0.0666     +0.1267     +0.2209     -0.0943
+     1.0     +0.1422     -0.0293   +0.1716     +0.1160     +0.2182     -0.1022
+     2.0     +0.0656     -0.1671   +0.2327     -0.0288     +0.0406     -0.0694
+     3.0     +0.0233     -0.2438   +0.2671     -0.0904     -0.0489     -0.0415
+     5.0     -0.0297     -0.3200   +0.2903     -0.1203     -0.0988     -0.0215
+    10.0     -0.0896     -0.3982   +0.3086     -0.1338     -0.2073     +0.0736
+
+======================================================================
+[4] 임계값별 성능
+======================================================================
+
+[window=0.5s]
+  최적 임계값 = +0.1297
+  TPR = 0.989, FPR = 0.487
+  AUC = 0.7891
+  N_pos = 177.0, N_neg = 236.0
+
+[window=1.0s]
+  최적 임계값 = +0.1136
+  TPR = 1.000, FPR = 0.052
+  AUC = 0.9480
+  N_pos = 87.0, N_neg = 116.0
+
+[window=2.0s]
+  최적 임계값 = -0.0367
+  TPR = 1.000, FPR = 0.107
+  AUC = 0.9571
+  N_pos = 42.0, N_neg = 56.0
+
+[window=3.0s]
+  최적 임계값 = -0.0873
+  TPR = 0.963, FPR = 0.083
+  AUC = 0.9424
+  N_pos = 27.0, N_neg = 36.0
+
+[window=5.0s]
+  최적 임계값 = -0.1202
+  TPR = 0.933, FPR = 0.050
+  AUC = 0.9333
+  N_pos = 15.0, N_neg = 20.0
+
+[window=10.0s]
+  최적 임계값 = -0.2049
+  TPR = 1.000, FPR = 0.000
+  AUC = 0.8750
+  N_pos = 6.0, N_neg = 8.0
+
+[저장] /Users/robotjang/paper-diary/day01_mae/results/12m_window_ablation.txt
+[저장] /Users/robotjang/paper-diary/day01_mae/results/12m_window_ablation.npz
+
+======================================================================
+[5] 최적 윈도우 추천
+======================================================================
+기준: pos_min > neg_max (겹침 없음) + gap 최대
+  window=  0.5s: gap=+0.0666, overlap=-0.0943 ⚠️ 겹침
+  window=  1.0s: gap=+0.1716, overlap=-0.1022 ⚠️ 겹침
+  window=  2.0s: gap=+0.2327, overlap=-0.0694 ⚠️ 겹침
+  window=  3.0s: gap=+0.2671, overlap=-0.0415 ⚠️ 겹침
+  window=  5.0s: gap=+0.2903, overlap=-0.0215 ⚠️ 겹침
+  window= 10.0s: gap=+0.3086, overlap=+0.0736 ✅ 분리

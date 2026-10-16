@@ -1,0 +1,12 @@
+# mini-MAE 재현 환경 (Python 3.14 / Apple Silicon 검증)
+torch>=2.14,<3
+torchvision>=0.29,<1
+numpy>=2.5
+Pillow>=12.3
+pyarrow>=26.0
+tqdm>=4.70
+PyYAML>=6.0
+pytest>=9.1
+pandas>=3.0   # (선택) 메트릭 분석
+matplotlib>=3.11  # (선택) loss 곡선 시각화
+requests>=2.32    # (선택) 데이터 다운로드

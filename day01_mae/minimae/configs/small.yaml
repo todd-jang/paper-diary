@@ -1,0 +1,22 @@
+# configs/small.yaml — 스케일업용 ViT-Small (더 많은 데이터/시간 필요)
+arch: vit_small
+img_size: 224
+patch_size: 16
+mask_ratio: 0.75
+epochs: 100
+batch_size: 64
+lr: 1.5e-4
+weight_decay: 0.05
+warmup_epochs: 10
+layer_decay: 0.75
+min_lr: 1.0e-6
+clip_grad: 1.0
+norm_pix_loss: true
+num_workers: 4
+seed: 0
+log_every: 50
+data: data/subset/train
+out: runs/mini_mae_small.pt
+metrics: runs/metrics_small.csv
+logfile: runs/train_small.log
+device: auto

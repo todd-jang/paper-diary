@@ -1,0 +1,27 @@
+========================================================================
+12i: Siren Template Score (성공)
+Date: 2026-10-15
+========================================================================
+
+[Score 정의]
+score = cos(audio, siren_template) - cos(audio, road_template)
+  - siren_template = mean(real_sirens AST features)
+  - road_template  = mean(clip untouched AST features)
+
+[결과 요약]
+              score 범위
+real_sirens   +0.33 ~ +0.41   ← 사이렌 있음
+with_siren    -0.06 ~ -0.14   ← 도로+사이렌
+untouched     -0.35 ~ -0.53   ← 도로 소음만
+synthetic     +0.04           ← 합성 사이렌
+
+[판정]
+✅ real_sirens와 untouched 완벽 분리 (gap 0.7~0.9)
+✅ with_siren이 untouched보다 명확히 높음 (gap 0.25~0.4)
+✅ 도메인 무관 (T09도 음수)
+✅ 임계값: score > -0.20
+
+[spatial-avla 통합]
+details["siren_score_template"] = score
+details["siren_detected_mae"] = score > -0.20
+========================================================================

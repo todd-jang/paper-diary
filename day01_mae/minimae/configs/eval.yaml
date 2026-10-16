@@ -1,0 +1,12 @@
+# configs/eval.yaml — 선형 프로빙 설정
+img_size: 224
+patch_size: 16
+epochs: 30
+batch_size: 128
+lr: 1.0e-3
+wd: 0.0
+num_workers: 4
+seed: 0
+train: data/subset/train
+val: data/subset/val
+device: auto

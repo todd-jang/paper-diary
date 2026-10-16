@@ -1,0 +1,22 @@
+# configs/tiny.yaml — mini-MAE ViT-Tiny 사전학습 (검증된 기본값)
+arch: vit_tiny
+img_size: 224
+patch_size: 16
+mask_ratio: 0.75
+epochs: 20
+batch_size: 64
+lr: 1.5e-4
+weight_decay: 0.05
+warmup_epochs: 5
+layer_decay: 0.75
+min_lr: 1.0e-6
+clip_grad: 1.0
+norm_pix_loss: true
+num_workers: 4
+seed: 0
+log_every: 50
+data: data/subset/train
+out: runs/mini_mae_tiny.pt
+metrics: runs/metrics_tiny.csv
+logfile: runs/train_tiny.log
+device: auto

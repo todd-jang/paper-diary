@@ -1,0 +1,30 @@
+========================================================================
+13b: spatial-avla siren 통합 완료
+Date: 2026-10-15
+========================================================================
+
+[통합된 컴포넌트]
+1. configs/siren_template.pt (768-dim, siren/road)
+2. src/exp_a/mae_siren.py (런타임)
+3. src/core/agents/s_v.py (에이전트 통합)
+4. mocks/mock_base.json (siren 필드 제거)
+
+[클립 단위 판정 (임계값 -0.20)]
+clip/audio       score     detected
+C01/with_siren   -0.0858   True
+C02/with_siren   -0.0586   True
+C04/with_siren   -0.1355   True
+T09/untouched    -0.2252   False
+
+[프레임 단위 (window=2.0s, 임계값 -0.04)]
+clip/audio       mean      detected
+C01/with_siren   +0.0876   14/14
+C01/untouched    -0.2592   0/14
+T09/untouched    -0.0482   6/14  (오탐)
+
+[내일 오전]
+1. Gradio UI 실행
+2. with_siren/untouched 토글
+3. 프레임 단위 통합
+4. 최종 검증
+========================================================================

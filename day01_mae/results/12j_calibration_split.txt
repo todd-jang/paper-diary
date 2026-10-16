@@ -1,0 +1,35 @@
+========================================================================
+12j: Siren Score Calibration Split (성공!)
+Date: 2026-10-15
+========================================================================
+
+[TRAIN]
+siren_template: G44-01, G44-02, G44-03
+road_template:  C01, C02 untouched
+
+[VAL: 학습에 없는 데이터]
+G44-04 (Ambulance, 새 siren):  +0.195 ~ +0.200  ✅
+C04/untouched (새 road):       -0.467          ✅
+C04/with_siren:                -0.136
+
+[TEST: 완전 독립]
+G44-05 (Boat, 독립):           +0.223 ~ +0.236  ✅
+G44-07 (Emergency, 독립):      +0.202 ~ +0.204  ✅
+T09/untouched (독립 road):     -0.225          ✅
+
+[SYNTH: 합성]
+T09 + G44-05:                  +0.006
+T09 + G44-07:                  +0.069
+
+========================================================================
+[결론]
+✅ 도메인 무관 siren 감지 성공
+✅ 임계값: score > 0 (또는 > -0.1)
+✅ real_sirens: +0.20 ~ +0.40
+✅ untouched:   -0.23 ~ -0.50
+✅ gap 0.4~0.9 (명확한 분리)
+
+[spatial-avla 통합]
+details["siren_score_mae"] = cos(feat, siren_template) - cos(feat, road_template)
+details["siren_detected_mae"] = score > 0.0
+========================================================================

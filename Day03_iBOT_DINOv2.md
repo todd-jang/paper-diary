@@ -13,6 +13,7 @@
 - 📜 [`01_코드워크스루.md`](./day03_ibot_dinov2/01_코드워크스루.md) — iBOT(온라인 토크나이저+두 손실) / DINOv2(DINO+iBOT+KoLeo) 라인바이런 해설
 - 📐 [`02_수식유도.md`](./day03_ibot_dinov2/02_수식유도.md) — MIM=KD 정식화, L[CLS]/L[MIM], EMA, Sinkhorn-Knopp, KoLeo 유도
 - 💻 [`03_실습.md`](./day03_ibot_dinov2/03_실습.md) — iBOT 축소판 직접 구현·학습 (+ `ibot_demo.py`, MPS 실측)
+- 🔁 [`beit_2stage_demo.py`](./day03_ibot_dinov2/beit_2stage_demo.py) — **BEiT식 2단계 대조군**(VQ-VAE 동결 → hard 토큰 MIM, 실측 포함)
 - 📊 [`04_비교표.md`](./day03_ibot_dinov2/04_비교표.md) — MAE vs BEiT vs SimMIM vs **iBOT** vs **DINOv2** (5자 심층 비교)
 
 ---

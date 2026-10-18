@@ -56,7 +56,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 01 | 10/14 | MAE | ✅ 완료 (mini-MAE 재현 + 개발이관) |
 | 02 | 10/15 | BEiT / SimMIM | ✅ 완료 (심화자료 + Quest + 채점) |
 | 03 | 10/16 | iBOT → DINOv2 | ✅ 완료 (10/18 마감 · 심화자료 + 실습 + Quest) |
-| 04 | 10/19 | DeepSeek-V2 | ⬜ |
+| 04 | 10/19 | DeepSeek-V2 | 🚧 진행 중 (심화자료 + 실습 완료 · Quest 대기) |
 | 05 | 10/20 | DeepSeek-V3 | ⬜ |
 | 06 | 10/21 | DeepSeek-R1 | ⬜ |
 | 07 | 10/22 | DETR | ⬜ |

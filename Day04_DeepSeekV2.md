@@ -108,4 +108,6 @@
 
 **Quest 결과:** (진행 중)
 
-**다음:** Day 5 = **DeepSeek-V3** (aux-loss-free balancing + MTP + FP8)
+**다음:** Day 5 = **DeepSeek-V3** (2412.19437, MoE + FP8 + MTP)
+
+> **Day 5 방침 (2026-10-18, 학생 확정):** 비교표는 **true ablation** 중심 — 같은 DeepSeek-V3 실험 환경에서 변수만 켜고 끄기: **aux-loss-free balancing on/off · MTP on/off · FP8 on/off · shared-expert 수 변화**. 도메인 교차 숫자 비교(vision ↔ NLP)는 금지. (도메인 내 비교표는 허용 — Day 3 vision SSL 5-way, Day 4 attention/MoE 계보처럼)

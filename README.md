@@ -59,7 +59,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 03 | 10/16 | iBOT → DINOv2 | ✅ 완료 (10/18 마감 · 심화자료 + 실습 + Quest) |
 | 04 | 10/19 | DeepSeek-V2 | ✅ 완료 (10/18 · 심화자료 + 실습 + Quest 6/6 정답대 + Feynman) |
 | 05 | 10/20 | DeepSeek-V3 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 10문항 평균 92.0%(오전 90.6/오후 95.3), Feynman 생략) |
-| 06 | 10/21 | DeepSeek-R1 | 🔄 진행 중 (10/19 · 오전 형식 Quest 3문항 — 원문 독해 중심, 심화자료 생략) |
+| 06 | 10/21 | DeepSeek-R1 | ✅ 완료 (10/19 · 오전 형식 Quest 3문항 평균 94.7%(Q1 95/Q2 93/Q3 96), 원문 대조 검증 9건, Feynman 생략) |
 | 07 | 10/22 | DETR | ⬜ |
 | 08 | 10/23 | Deformable DETR | ⬜ |
 | 09 | 10/26 | DAB / DN-DETR | ⬜ |

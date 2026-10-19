@@ -1,0 +1,18 @@
+[MLA demo] device=mps T=64 n_h=4 d_h=8 d_c=16 d_c'=24 d_hR=4
+
+(1) KV cache / token (V2: n_h=128, d_h=128, d_c=512, d_hR=64, L=60):
+    MHA = 2·n_h·d_h·L = 1,966,080   MLA = (d_c+d_hR)·L = 34,560   →  감소 98.24%
+    128K 문맥 fp16: MHA 480.00 GB  vs  MLA 8.44 GB
+    (논문 headline: DeepSeek 67B 대비 KV cache −93.3%)
+
+(2) 흡수 항등식 (RoPE 없음):
+    max|직접 − 흡수| = 7.276e-12   (상대 2.02e-07)  → 항등식 성립 ✔
+
+(3) k^C 에 RoPE 적용 시 (흡수 불가):
+    max|RoPE직접 − 흡수| = 4.590e-05  (≫ 0)  → 위치 의존이라 흡수 불가 ✗
+    ⇒ decoupled RoPE: RoPE 를 별도 q^R/k^R 채널로 이동하면 C-부분 흡수 유지
+    decoupled 분해: max|(C흡수 + R명시) − 직접| = 2.910e-11  → 일치 ✔
+
+(4) 출력 shape: MLA out=(64, 32)  (d_c=16, n_h·d_h=32 로 재구성 가능)
+
+[결론] MLA = MHA + low-rank KV joint compression. KV cache (d_c+d_hR) 만 저장 + W^UK/W^UV 흡수 → K,V materialize 불필요. decoupled RoPE 로 위치정보를 별도 소채널에 실어 흡수 가능성 유지.

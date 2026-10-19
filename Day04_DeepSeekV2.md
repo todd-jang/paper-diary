@@ -11,7 +11,7 @@
 ## 🧪 심화 산출물 (day04_deepseek_v2/)
 - 📜 [`01_코드워크스루.md`](./day04_deepseek_v2/01_코드워크스루.md) — MLA(저랭크 KV 압축·흡수·decoupled RoPE) + DeepSeekMoE 라인바이런
 - 📐 [`02_수식유도.md`](./day04_deepseek_v2/02_수식유도.md) — 식 (9)–(22): 압축, 흡수 항등식 `qᵀk=(c^Q)ᵀA_i c^KV`, decoupled RoPE, MoE 게이트
-- 💻 [`03_실습.md`](./day04_deepseek_v2/03_실습.md) — `mla_demo.py`로 KV cache·흡수·RoPE 흡수파괴 **수치 검증**(MPS 실측)
+- 💻 [`03_실습.md`](./day04_deepseek_v2/03_실습.md) — `mla_demo.py`로 KV cache·흡수·RoPE 흡수파괴 **수치 검증**(MPS 실측 · 로그 `runs/mla_demo_stdout.txt`)
 - 📊 [`04_비교표.md`](./day04_deepseek_v2/04_비교표.md) — MHA/MQA/GQA/**MLA** + Dense/MoE/**DeepSeekMoE** 비교
 
 ---
@@ -155,7 +155,7 @@
 1. **Q5/Q6은 "방향·용어는 정확하나 메커니즘 서술이 얕음"** — 지식 명명(hybridity/redundancy)에서 멈추고 "조합 수 폭발", "병목=정규화", "효율→역량 개방"의 **인과 사슬**까지 채우기.
 2. **Feynman 재작성 시** 이 인과 사슬을 5문장에 녹이기.
 
-**검증(실습):** `mla_demo.py` MPS 실측 — KV cache −98.24%, 흡수 항등식 `7.3e-12`, RoPE 시 흡수파괴 `4.6e-05`, decoupled `2.9e-11`.
+**검증(실습):** `mla_demo.py` MPS 실측 — KV cache −98.24%, 흡수 항등식 `7.3e-12`, RoPE 시 흡수파괴 `4.6e-05`, decoupled `2.9e-11`. 실행 로그 `day04_deepseek_v2/runs/mla_demo_stdout.txt`(2026-10-19 재현, 문서 §1과 문자 단위 일치).
 
 **다음:** Day 5 = **DeepSeek-V3** (2412.19437, MoE + FP8 + MTP)
 

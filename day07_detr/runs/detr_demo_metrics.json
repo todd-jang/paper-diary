@@ -1,0 +1,24 @@
+{
+  "A_hungarian": {
+    "n_trials": 500,
+    "opt_beats_greedy_ratio": 0.168,
+    "naive_greedy_dup_ratio": 0.316,
+    "matched_avg_prob": 0.4718984061707176,
+    "perm_invariance_gap": 0.0
+  },
+  "B_loss_scale": {
+    "l1_ratio": 9.444445977485998,
+    "giou_ratio": 1.0000017109785673
+  },
+  "C_empty_downweight": {
+    "per_obj": 0.10536051565782628,
+    "per_bg": 4.199705077879927,
+    "ratio_raw": 39.86033146913484,
+    "ratio_after": 3.9860331469134844
+  },
+  "D_query_selection": {
+    "vanilla_prop": 0.07333333333333333,
+    "uncertainty_prop": 0.19,
+    "gain": 2.590909090909091
+  }
+}

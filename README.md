@@ -48,6 +48,13 @@
 ### 🔖 예비(여유 시 추가)
 DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models (1803.10122) · DreamerV3 (2301.04104) · Genie (2402.15391) · VL-JEPA
 
+### 🗺️ 별도 트랙(준비 자료 있음)
+- **3D 객체 탐지** — [`3D_OBJECT_DETECTION_지도.md`](./3D_OBJECT_DETECTION_지도.md) (2026-10-20 작성 · 링크 44편 ID 검증 완료)
+  - 순서 제안: **DETR3D(2110.06922) → PETR(2203.05625) → StreamPETR(2303.11926) → Sparse4D(2211.10581)/Far3D(2308.09616) → Occupancy(SurroundOcc 2303.09551)**
+  - LiDAR 계열 참고: PointPillars(1812.05784) · PV-RCNN(1912.13192) · CenterPoint(2006.11275) · TransFusion(2203.11496)
+  - 서베이: [2206.09474](https://arxiv.org/abs/2206.09474) · [2106.12735](https://arxiv.org/abs/2106.12735) · [2204.00106](https://arxiv.org/abs/2204.00106) · [2408.16530](https://arxiv.org/abs/2408.16530)
+  - D7~D10(DETR→Deformable→DAB/DN→DINO/RT-DETR) 이후에 붙이면 2D→3D 개념 이동이 없다
+
 ---
 
 ## 🗂 진행 현황
@@ -60,7 +67,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 04 | 10/19 | DeepSeek-V2 | ✅ 완료 (10/18 · 심화자료 4종 + 실습(`mla_demo` 4검증 · `runs/` 로그) + Quest 6/6 정답대 + Feynman) |
 | 05 | 10/20 | DeepSeek-V3 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 10문항 평균 92.0%(오전 90.6/오후 95.3), Feynman 생략) |
 | 06 | 10/21 | DeepSeek-R1 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 3문항 평균 95.3%(Q1 95/Q2 95/Q3 96), 원문 대조 9건 + 정정 3건, Feynman 생략) |
-| 07 | 10/22 | DETR | ⬜ |
+| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | 🔄 진행 중 (10/20 — 심화자료 **5종** + `detr_demo.py` 4검증 산출·결정성 검증 완료, **Quest 5문항 대기**) |
 | 08 | 10/23 | Deformable DETR | ⬜ |
 | 09 | 10/26 | DAB / DN-DETR | ⬜ |
 | 10 | 10/27 | DINO-DETR / RT-DETR | ⬜ |

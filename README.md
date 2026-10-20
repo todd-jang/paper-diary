@@ -61,6 +61,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
   - LiDAR 계열 참고: PointPillars(1812.05784) · PV-RCNN(1912.13192) · CenterPoint(2006.11275) · TransFusion(2203.11496)
   - 서베이: [2206.09474](https://arxiv.org/abs/2206.09474) · [2106.12735](https://arxiv.org/abs/2106.12735) · [2204.00106](https://arxiv.org/abs/2204.00106) · [2408.16530](https://arxiv.org/abs/2408.16530)
   - D7~D10(DETR→Deformable→DAB/DN→DINO/RT-DETR) 이후에 붙이면 2D→3D 개념 이동이 없다
+  - **Day 07 완결 시점(10/20) 확정 사항**: ① DETR의 최대 결손은 **AP_S −5.5**(Faster R-CNN-FPN+ 대비) → **Day 08 Deformable DETR의 멀티스케일 attention이 여기서 풀린다** ② RT-DETR의 49% GFLOPs vs 11% AP는 2차 통계(Lin et al. 2022 인용) ③ uncertainty-minimal은 공개 코드의 랭킹이 아니라 **손실 쪽** 변경 ④ Chart 9종은 `day07_detr/make_charts.py`로 재생성 가능
 
 ---
 
@@ -74,7 +75,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 04 | 10/19 | DeepSeek-V2 | ✅ 완료 (10/18 · 심화자료 4종 + 실습(`mla_demo` 4검증 · `runs/` 로그) + Quest 6/6 정답대 + Feynman) |
 | 05 | 10/20 | DeepSeek-V3 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 10문항 평균 92.0%(오전 90.6/오후 95.3), Feynman 생략) |
 | 06 | 10/21 | DeepSeek-R1 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 3문항 평균 95.3%(Q1 95/Q2 95/Q3 96), 원문 대조 9건 + 정정 3건, Feynman 생략) |
-| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | 🔄 진행 중 (10/20 — 심화자료 **8종** + 데모 2종 + **차트 9종** 산출, Quest 5문항 대기 · 저녁 세션) |
+| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | ✅ 완료 (10/20 — Quest 5문항 평균 **95.2%**(Q1 95·Q2 94·Q3 96·Q4 95·Q5 96) · 심화자료 8종 + 데모 2종 + **차트 9종** · 4검증 + 파이프라인 데모(uncertainty AP 0.760→0.791) · 원문 대조 오류 0건) |
 | 08 | 10/23 | Deformable DETR | ⬜ |
 | 09 | 10/26 | DAB / DN-DETR | ⬜ |
 | 10 | 10/27 | DINO-DETR / RT-DETR | ⬜ |

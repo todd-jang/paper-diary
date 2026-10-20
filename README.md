@@ -12,6 +12,13 @@
 - **기록** — `DayNN_주제.md` 노트에 요약/수식/의문점 저장
 - 노트의 `나의 답변`, `Feynman 설명`, `의문점`은 **본인이** 채우고, `채점 & 교정`은 선생님이 채운다
 - **비교 원칙:** ablation은 **같은 시스템·도메인 안에서 변수 하나만** 바꿀 때만 성립 (vision끼리 / NLP끼리 / 멀티모달끼리). 도메인 교차 숫자 비교는 금지
+- **시각화 규약 (2026-10-20 정착 — D8 SAM · D12 CLIP · D14 LLaVA · D16 V-JEPA 등 이후 모든 Day 적용):**
+  - **차트 최소 3종 + 도식 1개**를 심화자료와 함께 제출. 기본 조합: ① 정량 비교(바/분포) ② 곡선(스윕·학습·trade-off) ③ 구조·우선순위(산점도) ④ 파이프라인/아키텍처 도식
+  - 위치는 `dayNN_xxx/runs/chart_*.png`(demo 스크립트가 함께 생성하거나 `make_charts.py`로 별도 생성). **문서 본문에 `![](runs/chart_*.png)`로 임베딩** (runs/만 두고 본문에 링크하지 말 것)
+  - 규격: dpi 150 · 한글 폰트 `AppleGothic` · `axes.unicode_minus=False` · 라벨 한글+영문 병기 · figsize 기본 (9,5) 또는 (11,4.2) 2-panel
+  - **출처 표기 필수**: 캡션에 ① 논문 표 인용(DETR Table 1 등) ② 자체 실측(자사 데모) ③ 시뮬레이션을 구분 표기. 시뮬레이션은 반드시 "시뮬레이션"이라 명시
+  - 생성 스크립트는 `dayNN_xxx/make_charts.py`로 두고 **실행 명령을 03_실습.md에 명시**(재현성)
+  - 참고 구현: `day07_detr/make_charts.py`(차트 9종) · `day05_deepseek_v3/v3_demo.py` · `day06_deepseek_r1/r1_demo.py`(데모 내장 생성)
 
 ---
 
@@ -67,7 +74,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 04 | 10/19 | DeepSeek-V2 | ✅ 완료 (10/18 · 심화자료 4종 + 실습(`mla_demo` 4검증 · `runs/` 로그) + Quest 6/6 정답대 + Feynman) |
 | 05 | 10/20 | DeepSeek-V3 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 10문항 평균 92.0%(오전 90.6/오후 95.3), Feynman 생략) |
 | 06 | 10/21 | DeepSeek-R1 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 3문항 평균 95.3%(Q1 95/Q2 95/Q3 96), 원문 대조 9건 + 정정 3건, Feynman 생략) |
-| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | 🔄 진행 중 (10/20 — 심화자료 **5종** + `detr_demo.py` 4검증 산출·결정성 검증 완료, **Quest 5문항 대기**) |
+| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | 🔄 진행 중 (10/20 — 심화자료 **8종** + 데모 2종 + **차트 9종** 산출, Quest 5문항 대기 · 저녁 세션) |
 | 08 | 10/23 | Deformable DETR | ⬜ |
 | 09 | 10/26 | DAB / DN-DETR | ⬜ |
 | 10 | 10/27 | DINO-DETR / RT-DETR | ⬜ |

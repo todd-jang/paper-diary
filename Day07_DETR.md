@@ -14,6 +14,8 @@
 - 🖼️ [`05_보충_RTDETRv2_8도해설.md`](./day07_detr/05_보충_RTDETRv2_8도해설.md) — 보충 정리 논문 [RT-DETRv2 Explained in 8 Illustrations](https://arxiv.org/abs/2509.01241)(2509.01241, 2025) 해설: **실전(v2)의 텐서 흐름 8그림** — 전체 파이프라인(8400 = 80²+40²+20²) · 하이브리드 인코더 · denoising(Fig 4) · 블록별 loss · **multi-scale deformable attention(Fig 8)** = Day 08 예습
 - 🔎 [`06_쿼리선택.md`](./day07_detr/06_쿼리선택.md) — **쿼리 선택 전용 정리**: DETR의 학습된 object query(§3.2 · Fig 7 · 부록 Fig 12 슬롯 상한) → 쿼리 선택 계보(Deformable·DAB·DN·DINO·RT-DETR 표) → RT-DETR uncertainty-minimal(식 2–3 · Fig 6 · Table 4) → **selection(랭킹) ≠ objective(손실)** 코드 실체(Paddle/PyTorch 모두 cls 점수 top-K) → 3세대 비교 · 체크리스트
 - 🏗️ [`07_파이프라인데모.md`](./day07_detr/07_파이프라인데모.md) — **파이프라인 통째 데모**(`detr_pipeline_demo.py`, CPU · 합성 데이터): 백본→AIFI+CCFF→쿼리 선택(K=30)→디코더 6층+aux 헤드→헝가리아 세트 손실 end-to-end 학습. 결과 **vanilla AP 0.760 → uncertainty 0.791(+3.1, 논문 방향과 일치)** · 재학습 없는 디코더 깊이 조절 재현 · 구현 함정 3건(GIoU 쌍별/원소별 분리 · ∅ 클래스 +1 · **인코더 헤드 직접 감독 필수**) 기록
+- 📊 **차트 9종** — `day07_detr/runs/chart_*.png` (매칭 비용 분포 · L1/GIoU 스케일 · ∅ 하향 10 · 쿼리 선택 산점도 · DETR AP 분해 · RT-DETR 인코더 trade-off · 파이프라인 학습곡선·깊이곡선·도식) — 생성: `day07_detr/make_charts.py`
+- 📋 [`08_Quest_안내.md`](./day07_detr/08_Quest_안내.md) — **저녁 세션용 질문지**: Q1~Q5 (a)(b)(c) 분해 + 근거 위치 + 차트 인용 가이드 + 채점 기준 + 예상 소요시간
 - 🗺️ [`../3D_OBJECT_DETECTION_지도.md`](./3D_OBJECT_DETECTION_지도.md) — **3D 객체 탐지 트랙 지도**(보충): LiDAR 계열(VoxelNet→PointPillars→CenterPoint) · **3D DETR 4세대**(DETR3D→PETR→StreamPETR→Sparse4D/Far3D) · Occupancy · 멀티모달 융합 · 2026 최신 15편 · 서베이 4편 — **링크된 arXiv ID 44편 전부 제목 대조 검증 완료**
 
 ---

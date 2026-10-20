@@ -1,0 +1,63 @@
+/Users/robotjang/paper-diary/day07_detr/detr_pipeline_demo.py:541: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
+  tot += float(loss)
+============================================================================
+Day 07 보충 — RT-DETR 파이프라인 통째 데모 (합성 데이터, CPU)
+============================================================================
+
+[STEP 0] 파이프라인 텐서 흐름
+  input                     : (2, 3, 64, 64)
+  backbone_S3_S4_S5         : [(2, 32, 16, 16), (2, 64, 8, 8), (2, 128, 4, 4)]
+  AIFI_input_tokens(S5)     : (2, 16, 64)
+  CCFF_out_levels           : [(2, 64, 16, 16), (2, 64, 8, 8), (2, 64, 4, 4)]
+  candidates_N              : 336
+  selected_K                : 30
+  content_query             : (2, 30, 64)
+  position_query            : (2, 30, 4)
+  decoder_layers            : 6
+  aux_head_outputs          : 5
+  pred_logits               : (2, 30, 4)
+  pred_boxes                : (2, 30, 4)
+
+[STEP 1] 합성 데이터
+  train (300, 3, 64, 64) / val (100, 3, 64, 64) (이미지당 1~4 직사각형, 3 클래스)
+
+=== [vanilla (분류 점수 top-K)] epochs=80, batch=8, K=30, dec_layers=6 ===
+  ep 10 loss=7.8236  U=0.000  AP@0.5=0.423  Prop both=0.048  (52s)
+  ep 20 loss=6.7600  U=0.000  AP@0.5=0.508  Prop both=0.122  (104s)
+  ep 30 loss=6.3945  U=0.000  AP@0.5=0.676  Prop both=0.099  (156s)
+  ep 40 loss=7.0151  U=0.000  AP@0.5=0.673  Prop both=0.098  (203s)
+  ep 50 loss=6.2372  U=0.000  AP@0.5=0.641  Prop both=0.147  (251s)
+  ep 60 loss=5.5935  U=0.000  AP@0.5=0.686  Prop both=0.121  (299s)
+  ep 70 loss=5.2291  U=0.000  AP@0.5=0.754  Prop both=0.107  (349s)
+  ep 80 loss=5.2375  U=0.000  AP@0.5=0.760  Prop both=0.107  (407s)
+
+=== [uncertainty-minimal (U 항 추가)] epochs=80, batch=8, K=30, dec_layers=6 ===
+  ep 10 loss=6.4426  U=0.006  AP@0.5=0.386  Prop both=0.073  (61s)
+  ep 20 loss=4.7461  U=0.004  AP@0.5=0.610  Prop both=0.109  (122s)
+  ep 30 loss=3.9011  U=0.005  AP@0.5=0.748  Prop both=0.098  (183s)
+  ep 40 loss=3.1997  U=0.003  AP@0.5=0.787  Prop both=0.106  (237s)
+  ep 50 loss=2.6753  U=0.003  AP@0.5=0.799  Prop both=0.090  (297s)
+  ep 60 loss=2.3475  U=0.003  AP@0.5=0.801  Prop both=0.086  (359s)
+  ep 70 loss=2.1228  U=0.003  AP@0.5=0.802  Prop both=0.086  (418s)
+  ep 80 loss=2.1225  U=0.003  AP@0.5=0.791  Prop both=0.086  (474s)
+
+============================================================================
+[RESULT] 두 방식 비교 (동일 시드 · 동일 데이터 · 동일 스케줄)
+============================================================================
+항목                                       vanilla     uncertainty
+AP@0.5 (val)                               0.760           0.791
+Prop cls (>0.5)                            0.037           0.099
+Prop both (cls & IoU >0.5)                 0.107           0.086
+파라미터(M)                                     0.43            0.43
+
+  재학습 없이 디코더 깊이를 줄였을 때의 AP@0.5 (RT-DETR Table 5 대응):
+사용 층                                     vanilla     uncertainty
+6층                                         0.760           0.791
+5층                                         0.759           0.802
+4층                                         0.752           0.794
+3층                                         0.784           0.797
+2층                                         0.789           0.786
+1층                                         0.774           0.772
+
+[SAVED] /Users/robotjang/paper-diary/day07_detr/runs/detr_pipeline_metrics.json

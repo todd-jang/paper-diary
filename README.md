@@ -75,7 +75,7 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 04 | 10/19 | DeepSeek-V2 | ✅ 완료 (10/18 · 심화자료 4종 + 실습(`mla_demo` 4검증 · `runs/` 로그) + Quest 6/6 정답대 + Feynman) |
 | 05 | 10/20 | DeepSeek-V3 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 10문항 평균 92.0%(오전 90.6/오후 95.3), Feynman 생략) |
 | 06 | 10/21 | DeepSeek-R1 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 3문항 평균 95.3%(Q1 95/Q2 95/Q3 96), 원문 대조 9건 + 정정 3건, Feynman 생략) |
-| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | ✅ 완료 (10/20 — Quest 5문항 평균 **95.2%**(Q1 95·Q2 94·Q3 96·Q4 95·Q5 96) · 심화자료 8종 + 데모 2종 + **차트 9종** · 4검증 + 파이프라인 데모(uncertainty AP 0.760→0.791) · 원문 대조 오류 0건) |
+| 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | ✅ 완료 (10/20 — Quest 5문항 평균 **96.6%**(Q1 96·Q2 96·Q3 97·Q4 96·Q5 98) · 심화자료 8종 + 데모 2종 + **차트 9종** · 4검증 + 파이프라인 데모(uncertainty AP 0.760→0.791) · 원문 대조 오류 0건 · 보완 5건 해소) |
 | 08 | 10/23 | Deformable DETR | ⬜ |
 | 09 | 10/26 | DAB / DN-DETR | ⬜ |
 | 10 | 10/27 | DINO-DETR / RT-DETR | ⬜ |

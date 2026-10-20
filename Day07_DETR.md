@@ -6,6 +6,8 @@
 > 진행 방식: **오전 형식(60분)** — 읽기 20분 · 작성 35분 · 자기점검 5분. 심화자료 4종 + `detr_demo.py` 4검증 산출.
 > 이전 Day 연결: Day 4–6의 LLM은 **토큰을 순서대로 거쳐가는 autoregressive 생성**이었다. 여기서는 그 반대 — **N=100 슬롯을 한 번에 내놓는 병렬 세트 예측**이다. 순차 모델이 아닌 "세트"를 어떻게 학습시키는가가 오늘의 근거 문제.
 
+> **⚠️ 일정 변경(2026-10-20)**: DETR 계열 트랙을 **RT-DETR에서 종료**하고 D8=RT-DETR 본문(Quest까지) → D9 GLIP/SAM → D10 자율 세션 → D11 멀티모달 CLIP → D12~13 LLaVA 2일 → D14 VL-JEPA로 재편. Deformable/DAB/DN/DINO는 **예비**로 이동(README 참조). 이 노트 안의 "Day 08(Deformable)" 등 언급은 **답변 시점(당시 계획) 기준 기록**이며, 선생님 작성 포인터만 새 일정에 맞게 갱신했다.
+
 ## 🧪 심화 산출물 (day07_detr/)
 - 📜 [`01_코드워크스루.md`](./day07_detr/01_코드워크스루.md) — 공식 구현 저장소(`facebookresearch/detr`) 실사: `HungarianMatcher` ↔ 식 (1) 매칭 비용, `SetCriterion` ↔ 식 (2) 헝가리아 손실(∅ 하향 10, λ_L1=5 · λ_iou=2), 두 pos enc(공간 pos enc · object query)의 매 레이어 추가 위치 + RT-DETR(`lyuwenyu/rt-detr`) 하이브리드 인코더 라인 대응
 - 📐 [`02_수식유도.md`](./day07_detr/02_수식유도.md) — 식 (1)–(2) 양자택일 매칭 · 헝가리아 손실, 식 (9) 박스 손실(L1+GIoU), 식 (10) GIoU 정의와 **스케일 불변성 증명**, RT-DETR 식 (1) 하이브리드 인코더, 식 (2)–(3) 불확실성 U=‖P−C‖
@@ -400,7 +402,7 @@ Fig 5(기린 24마리 · 학습 최대 13)와 Fig 12(100→30)를 **한 문장**
   3. **RT-DETR Table 4의 138%·120%는 '상대 개수 차'**이지 퍼센트포인트 향상이 아니다 — "보라 점 138% 더 많다"는 *개수* 비교다.
   4. **uncertainty는 랭킹이 아니라 손실 쪽 변화**: 공개 v1 코드(PyTorch·Paddle 공통)의 top-K는 `torch.topk(enc_outputs_class.max(-1).values, 300)` = **분류 점수 기준**. RT-DETR가 바꾼 것은 식 (2)~(3)의 **손실**이며, Table 4·Fig 6은 "그 학습 효과로 분류 점수로 고른 피처의 품질도 좋아졌다"는 증거다.
   5. **49% GFLOPs vs 11% AP는 2차 통계**: RT-DETR 논문이 *Lin et al. 2022*를 인용한 값이며, 특정 모델·특정 분석의 결과다(보편 법칙 아님).
-- **남은 한계.** RT-DETR도 A_S YOLOv8-L보다 −0.5 — 소형 객체는 DETR 계열의 공통 bottleneck(원문 Table 1 APS −5.5에서 시작해 거의 복구됐지만 여전). 이 문제의 풀이는 Day 08 Deformable attention(자기 위치 주변만 본다)부터 시작된다.
+- **남은 한계.** RT-DETR도 A_S YOLOv8-L보다 −0.5 — 소형 객체는 DETR 계열의 공통 bottleneck(원문 Table 1 APS −5.5에서 시작해 거의 복구됐지만 여전). 이 문제의 풀이는 **Deformable attention(2010.04159, 10/20 변경으로 예비)** — 자기 위치 주변만 보는 attention — 부터 시작된다.
 
 ## 🏁 Day 7 종료 요약 (답변·채점 후 채움)
 

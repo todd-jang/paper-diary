@@ -7,7 +7,7 @@
 ## 🎯 왜 지금 붙이는가
 
 - 오늘 본 RT-DETR(2304.08069)은 **v1**이고, 실전에서 쓰는 `rtdetr-l.pt` 계열은 **v2**(RT-DETRv2, 2024)다. v2는 v1의 하이브리드 인코더 위에 **deformable attention + denoising(DN) 학습**을 얹은 버전이다.
-- 이 해설 논문은 그 v2의 **텐서 모양까지 그려서** 설명한다. Day 08(Deformable DETR)의 사전지식과 Day 10(RT-DETR 본문·DINO-DETR)의 시각적 문맥을 한 번에 잡아준다.
+- 이 해설 논문은 그 v2의 **텐서 모양까지 그려서** 설명한다. **Day 08(RT-DETR 본문)**의 시각적 문맥을 한 번에 잡아준다(⚠️ 10/20 일정 변경 전에는 Day 08=Deformable DETR, Day 10=RT-DETR 본문으로 planned).
 - **주의:** 이 논문은 *v2*를 다룬다. v1 논문의 "uncertainty-minimal 쿼리 선택"(Q5-b)과 v2 해설 그림의 "분류 브랜치 TopK" 표현은 **문헌이 다르다** — 아래 §4에서 구분한다.
 
 ## 📐 기본 설정(논문 명시)
@@ -60,7 +60,7 @@ input (B,3,640,640)
 ### Figure 4 — denoising task가 켜진 전체 구조 (학습 시)
 - GT 박스/라벨을 **의도적으로 조금 깨뜨려** denoising queries를 만든다 → `(B,d,4)` 박스와 `(B,d,80)` 클래스.
 - 이 쿼리는 GT와 **직접 대응**하므로 헝가리아 매칭이 필요 없다. 본 쿼리(300)와 denoising 쿼리(d)를 concat해 `(300+d)`개로 디코더에 넣고, attention mask `(300+d, 300+d)`로 **두 그룹이 서로를 보지 못하게** 가린다.
-- **손실은 두 그룹 따로 계산**한다(DN-DETR 계열, Day 09에서 다시 만난다).
+- **손실은 두 그룹 따로 계산**한다(DN-DETR 계열 — 10/20 변경으로 본 트랙 밖, 예비).
 
 ### Figure 5 — Decoder 전체
 - 6개 decoder block이 쌓이고, **각 블록마다 분류/박스 loss 스택**이 있다.
@@ -89,7 +89,7 @@ attention mask (300+d,300+d)          │
 - **오프셋**: 별도 Linear가 `(B,300+d,192)`(=96×2, x/y) 를 만들고, **기준점(쿼리 박스 중심)에 더해** 실제 샘플링 위치를 만든다. 기준점 생성에 쿼리 박스의 **너비·높이**가 쓰인다(`[:, :, None, :, 2:]`).
 - **정규화**: 샘플링 좌표는 `[0,1]` → `[-1,1]`로 재정규화(grid_sample 요구사항).
 - **값 추출**: 인코더 `(B,8400,256)`를 스케일별로 잘라 `(Bx8,32,80×80)`, `(Bx8,32,40×40)`, `(Bx8,32,20×20)` → 각 스케일에서 grid_sample → 샘플 값들을 attention weight로 가중합 → `(B,300+d,256)`.
-- **원리**: 전역 self-attention은 모든 키와 유사도를 계산해야 하지만, deformable attention은 **주변 몇 점만** 본다. Day 08(Deformable DETR)이 이 원문의 출발점이다.
+- **원리**: 전역 self-attention은 모든 키와 유사도를 계산해야 하지만, deformable attention은 **주변 몇 점만** 본다. Deformable DETR(2010.04159)이 이 원문의 출발점이며, 10/20 변경으로 **예비**로 이동.
 
 ## 🔍 v1 논문 vs v2 해설 — 표현 차이 감별
 
@@ -105,13 +105,13 @@ attention mask (300+d,300+d)          │
 
 ## 🔗 다음 Day로 이어지는 다리
 
-- **Day 08 (Deformable DETR)**: Figure 8의 deformable attention이 출발점. "모든 키를 보지 않고 몇 점만 본다"는 발상이 어디서 왔는지.
-- **Day 09 (DAB / DN-DETR)**: Figure 4의 denoising task(DN-DETR)와, "쿼리는 처음에 무엇이야?"라는 DAB의 질문.
-- **Day 10 (DINO-DETR / RT-DETR 본문)**: RT-DETRv2가 아니라 v1 본문 + DINO. v2는 오늘의 05 자료로 미리 한 번 훑은 상태.
+- **Deformable DETR (2010.04159, 예비)**: Figure 8의 deformable attention이 출발점. "모든 키를 보지 않고 몇 점만 본다"는 발상이 어디서 왔는지.
+- **DAB / DN-DETR (예비)**: Figure 4의 denoising task(DN-DETR)와, "쿼리는 처음에 무엇이야?"라는 DAB의 질문.
+- **Day 08 (RT-DETR 본문)**: RT-DETRv2가 아니라 v1 본문(오늘 07의 심화가 예비 학습). v2는 오늘의 05 자료로 미리 한 번 훑은 상태.
 
 ## 📌 오늘 읽기 순서에 넣는 방법
 
 1. 원문 DETR §3.1–3.2 (읽기 20분) → 세트 예측이 왜 가능한지
 2. RT-DETR §4.2·§4.3·Table 3·4·5 (Q5 근거) → 실시간으로 바꾼 두 손잡이
 3. **이 자료 Figure 1·2·4** (10분) → 오늘 다룬 구조가 실제 텐서로 어떻게 생겼는지 그림으로 고정
-4. Figure 8은 Day 08 예습으로 한 번 더
+4. Figure 8은 Deformable DETR(예비) 예습으로 한 번 더

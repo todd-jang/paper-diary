@@ -12,7 +12,8 @@
 - **기록** — `DayNN_주제.md` 노트에 요약/수식/의문점 저장
 - 노트의 `나의 답변`, `Feynman 설명`, `의문점`은 **본인이** 채우고, `채점 & 교정`은 선생님이 채운다
 - **비교 원칙:** ablation은 **같은 시스템·도메인 안에서 변수 하나만** 바꿀 때만 성립 (vision끼리 / NLP끼리 / 멀티모달끼리). 도메인 교차 숫자 비교는 금지
-- **시각화 규약 (2026-10-20 정착 — D8 SAM · D12 CLIP · D14 LLaVA · D16 V-JEPA 등 이후 모든 Day 적용):**
+- **시각화 규약 (2026-10-20 정착 — D8 RT-DETR · D9 GLIP/SAM · D11 CLIP · D12 LLaVA · D14 VL-JEPA 등 이후 모든 Day 적용):**
+  - 적용 대상(10/20 변경 반영): **D8 RT-DETR 본문** · D9 GLIP/SAM · D11 멀티모달 CLIP · D12 LLaVA · D13 LLaVA-1.5 · D14 VL-JEPA · D15 I-JEPA/V-JEPA · D16 V-JEPA 2 + 종합 · D10 자율 세션은 선택
   - **차트 최소 3종 + 도식 1개**를 심화자료와 함께 제출. 기본 조합: ① 정량 비교(바/분포) ② 곡선(스윕·학습·trade-off) ③ 구조·우선순위(산점도) ④ 파이프라인/아키텍처 도식
   - 위치는 `dayNN_xxx/runs/chart_*.png`(demo 스크립트가 함께 생성하거나 `make_charts.py`로 별도 생성). **문서 본문에 `![](runs/chart_*.png)`로 임베딩** (runs/만 두고 본문에 링크하지 말 것)
   - 규격: dpi 150 · 한글 폰트 `AppleGothic` · `axes.unicode_minus=False` · 라벨 한글+영문 병기 · figsize 기본 (9,5) 또는 (11,4.2) 2-panel
@@ -30,38 +31,40 @@
 - 10/16(금) D3: iBOT (2111.07832) → DINOv2 (2304.07193) *(완료 — 10/18 마감)*
 - 10/17(토)–10/18(일): 자율 복습 (버퍼)
 
-### Week 2 · 10/19–10/24 — LLM 백본 (DeepSeek) → 구조적 출력 (DETR)
-- 10/19(월) D4: DeepSeek-V2 (2405.04434) — MLA
-- 10/20(화) D5: **DeepSeek-V3** ⭐ (2412.19437) — MoE + FP8 + MTP
-- 10/21(수) D6: DeepSeek-R1 (2501.12948)
-- 10/22(목) D7: **DETR** ⭐ — 2005.12872
-- 10/23(금) D8: Deformable DETR (2010.04159)
-- 10/24(토): 자율
+### Week 2 · 10/19–10/24 — LLM 백본 (DeepSeek) → 구조적 출력 (DETR) → **실시간 검출·분할**
+> **⚠️ 2026-10-20 일정 변경 반영** — DETR 계열 트랙을 **RT-DETR에서 종료**하고, Deformable/DAB/DN/DINO는 예비로 이동. GLIP·SAM·CLIP으로 진행.
 
-### Week 3 · 10/26–11/01 — DETR (계속) + Multimodal
-- 10/26(월) D9: DAB-DETR (2201.12329) / DN-DETR (2203.01305)
-- 10/27(화) D10: DINO-DETR (2203.03605) / RT-DETR (2304.08069)
-- 10/28(수) D11: 주간 복습 + 선형 프로빙 실습
-- 10/29(목) D12: **CLIP** ⭐ (2103.00020)
-- 10/30(금) D13: BLIP-2 (2301.12597) / Flamingo (2204.14198)
-- 10/31(토)–11/01(일): 자율
+- 10/19(월) D4: DeepSeek-V2 (2405.04434) — MLA *(완료)*
+- 10/20(화) D5: **DeepSeek-V3** ⭐ (2412.19437) — MoE + FP8 + MTP *(완료)*
+- 10/20(화) D6: DeepSeek-R1 (2501.12948) *(완료)*
+- 10/20(화) D7: **DETR** ⭐ (2005.12872) + **RT-DETR 실시간 심화** (2304.08069) *(완료 — 평균 96.6%)*
+- **10/21(수) D8: RT-DETR 본문** (2304.08069) — **DETR 계열 트랙 종료**, Quest까지 완료
+- **10/22(목) D9: GLIP** (2112.03857) + **SAM** (2304.02643) — 오픈셋 검출 → 프롬프트 기반 분할
+- 10/23(금) D10: **자율 세션** 1일 (복습·심화 — 일정 변경으로 신설)
+- 10/24(토) D11: **멀티모달 CLIP** ⭐ (2103.00020)
 
-### Week 4 · 11/02–11/05 — LLaVA + JEPA (4일)
-- 11/02(월) D14: **LLaVA** ⭐ (2304.08485) + LLaVA-1.5 (2310.03744)
-- 11/03(화) D15: Qwen2-VL / Chameleon (2405.09818) — native multimodal
-- 11/04(수) D16: I-JEPA (2301.08243) / V-JEPA (2404.08471)
-- 11/05(목) D17: **V-JEPA 2** (2506.09985) + World Model 종합 🏁
+### Week 3 · 10/26–10/30 — 시각-언어(LLaVA) → 월드모델(JEPA)
+> **⚠️ 2026-10-20 일정 변경 반영** — LLaVA를 2일로 분리(논문 읽기 + Quest 각 일자), JEPA 계열로 직행.
+
+- **10/26(월) D12: LLaVA** ⭐ (2304.08485) — 논문 읽기 + Quest
+- **10/27(화) D13: LLaVA-1.5** (2310.03744) — 논문 읽기 + Quest
+- **10/28(수) D14: VL-JEPA** (2512.10942) — 비전-언어 joint embedding 예측
+- 10/29(목) D15: I-JEPA (2301.08243) / V-JEPA (2404.08471)
+- 10/30(금) D16: **V-JEPA 2** (2506.09985) + World Model 종합 🏁
+- 11/02(월)–11/05(목): 여유·보충 (예비 큐 소진 또는 심화)
 
 ### 🔖 예비(여유 시 추가)
-DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models (1803.10122) · DreamerV3 (2301.04104) · Genie (2402.15391) · VL-JEPA
+**DETR 계열**(10/20 변경으로 본 트랙에서 제외 — 3D 트랙의 DETR3D·PETR와 함께 필요 시 소진):
+Deformable DETR (2010.04159) · DAB-DETR (2201.12329) · DN-DETR (2203.01305) · DINO-DETR (2203.03605) · BEVFormer (2203.17270) · PETR (2203.05625) · DETR3D (2110.06922)
+**기타**: DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models (1803.10122) · DreamerV3 (2301.04104) · Genie (2402.15391) · BLIP-2 (2301.12597) · Flamingo (2204.14198) · Qwen2-VL (2405.09818) · Chameleon (2405.09818) · SAM 2 (2408.00714)
 
 ### 🗺️ 별도 트랙(준비 자료 있음)
 - **3D 객체 탐지** — [`3D_OBJECT_DETECTION_지도.md`](./3D_OBJECT_DETECTION_지도.md) (2026-10-20 작성 · 링크 44편 ID 검증 완료)
   - 순서 제안: **DETR3D(2110.06922) → PETR(2203.05625) → StreamPETR(2303.11926) → Sparse4D(2211.10581)/Far3D(2308.09616) → Occupancy(SurroundOcc 2303.09551)**
   - LiDAR 계열 참고: PointPillars(1812.05784) · PV-RCNN(1912.13192) · CenterPoint(2006.11275) · TransFusion(2203.11496)
   - 서베이: [2206.09474](https://arxiv.org/abs/2206.09474) · [2106.12735](https://arxiv.org/abs/2106.12735) · [2204.00106](https://arxiv.org/abs/2204.00106) · [2408.16530](https://arxiv.org/abs/2408.16530)
-  - D7~D10(DETR→Deformable→DAB/DN→DINO/RT-DETR) 이후에 붙이면 2D→3D 개념 이동이 없다
-  - **Day 07 완결 시점(10/20) 확정 사항**: ① DETR의 최대 결손은 **AP_S −5.5**(Faster R-CNN-FPN+ 대비) → **Day 08 Deformable DETR의 멀티스케일 attention이 여기서 풀린다** ② RT-DETR의 49% GFLOPs vs 11% AP는 2차 통계(Lin et al. 2022 인용) ③ uncertainty-minimal은 공개 코드의 랭킹이 아니라 **손실 쪽** 변경 ④ Chart 9종은 `day07_detr/make_charts.py`로 재생성 가능
+  - **배치(10/20 변경)**: DETR 계열 트랙이 D8(RT-DETR 본문)에서 끝나므로 3D 트랙은 **D8 이후**에 붙인다. DETR3D·PETR·StreamPETR·Sparse4D는 Deformable/DAB/DN/DINO의 **대체(replacement)**가 아니라 **확장(extension)**이므로, Deformable 계열이 예비로 밀려나도 3D 쪽 핵심 개념(멀티스케일 attention·쿼리·BEV)은 그대로 이어진다
+  - **Day 07 완결 시점(10/20) 확정 사항**: ① DETR의 최대 결손은 **AP_S −5.5**(Faster R-CNN-FPN+ 대비) → 멀티스케일 attention 계열(Deformable 2010.04159, 예비)에서 풀리는 문제이며 3D 트랙(BEV·멀티뷰)에서도 같은 구조가 재사용된다 ② RT-DETR의 49% GFLOPs vs 11% AP는 2차 통계(Lin et al. 2022 인용) ③ uncertainty-minimal은 공개 코드의 랭킹이 아니라 **손실 쪽** 변경 ④ Chart 9종은 `day07_detr/make_charts.py`로 재생성 가능
 
 ---
 
@@ -76,13 +79,13 @@ DeepSeekMath·GRPO (2402.03300) · LLaVA-OneVision (2408.03326) · World Models 
 | 05 | 10/20 | DeepSeek-V3 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 10문항 평균 92.0%(오전 90.6/오후 95.3), Feynman 생략) |
 | 06 | 10/21 | DeepSeek-R1 | ✅ 완료 (10/19 · 심화자료 4종 + 실습 4검증 + Quest 3문항 평균 95.3%(Q1 95/Q2 95/Q3 96), 원문 대조 9건 + 정정 3건, Feynman 생략) |
 | 07 | 10/22 | DETR (+RT-DETR 심화 — real-time 중심 요청 반영) | ✅ 완료 (10/20 — Quest 5문항 평균 **96.6%**(Q1 96·Q2 96·Q3 97·Q4 96·Q5 98) · 심화자료 8종 + 데모 2종 + **차트 9종** · 4검증 + 파이프라인 데모(uncertainty AP 0.760→0.791) · 원문 대조 오류 0건 · 보완 5건 해소) |
-| 08 | 10/23 | Deformable DETR | ⬜ |
-| 09 | 10/26 | DAB / DN-DETR | ⬜ |
-| 10 | 10/27 | DINO-DETR / RT-DETR | ⬜ |
-| 11 | 10/28 | 주간 복습 | ⬜ |
-| 12 | 10/29 | CLIP | ⬜ |
-| 13 | 10/30 | BLIP-2 / Flamingo | ⬜ |
-| 14 | 11/02 | LLaVA (+1.5) | ⬜ |
-| 15 | 11/03 | Qwen2-VL / Chameleon | ⬜ |
-| 16 | 11/04 | I-JEPA / V-JEPA | ⬜ |
-| 17 | 11/05 | V-JEPA 2 + 종합 | ⬜ |
+| 08 | 10/21 | **RT-DETR 본문** (DETR 계열 종료) | ⬜ |
+| 09 | 10/22 | **GLIP / SAM** | ⬜ |
+| 10 | 10/23 | **자율 세션** (1일) | ⬜ |
+| 11 | 10/24 | **멀티모달 CLIP** | ⬜ |
+| 12 | 10/26 | **LLaVA** (읽기 + Quest) | ⬜ |
+| 13 | 10/27 | **LLaVA-1.5** (읽기 + Quest) | ⬜ |
+| 14 | 10/28 | **VL-JEPA** | ⬜ |
+| 15 | 10/29 | I-JEPA / V-JEPA | ⬜ |
+| 16 | 10/30 | V-JEPA 2 + World Model 종합 🏁 | ⬜ |
+| — | 11/02–11/05 | 여유·보충 (예비 큐 소진) | ⬜ |

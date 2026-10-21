@@ -107,6 +107,18 @@
       </article>
 
       <article class="card">
+        <h2><small>G0 · rigor</small>Rigor is a test suite</h2>
+        <p>The measurement code itself is under test — <b>9 modules · 45 tests</b> guard the rig before any number is trusted:</p>
+        <p><span class="tag">gates_yaml</span>schema load · tolerance matches the precision table · <b>safe_mode disables attention capture</b> · rho variants agree<br>
+           <span class="tag">normalize</span>rho / tau endpoints · first token dropped · length-bin edges · entropy uniform = 1, degenerate = 0<br>
+           <span class="tag">report</span>bootstrap rejects n &lt; 100 · <b>cluster-level</b>, not token-level · paired diff + true-null gate helper<br>
+           <span class="tag">gpt-oss</span>attention rows sum &lt; 1 (sink) · router logits top-k · sliding-window mask beyond the window<br>
+           <span class="tag">gemma</span>softcapping path <b>exercised</b> · layer types alternate · real checkpoint test<br>
+           <span class="tag">tiny / real</span>gpt2 · llama · pythia tiny end-to-end runs, plus real-checkpoint tests</p>
+        <p>Eligibility is enforced in tests too: an <b>ineligible model is actually blocked</b>, never silently skipped.</p>
+      </article>
+
+      <article class="card">
         <h2><small>N02 · week 2</small>Three observables, frozen</h2>
         <p><b>gpt2</b> / <b>pythia-160m</b>, 12 blocks, instrumented block by block. The observable set is <b>frozen for traceability</b>:</p>
         <p><span class="tag">1</span>length-adjusted update norm ‖h<sub>l+1</sub>−h<sub>l</sub>‖<sub>F</sub>/√T<br>

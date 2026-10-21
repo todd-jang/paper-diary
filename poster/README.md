@@ -49,11 +49,10 @@ Sheet choice: the CSS pins the layout to A0 (841x1189mm); smaller sheets are a *
 layout, and the A1 preset additionally enlarges type and tightens gaps so the sheet stays legible.
 One-time setup (already done): `.venv/bin/python -m pip install playwright && .venv/bin/python -m playwright install chromium`
 
-**Alternative (matplotlib) builder** - useful for a fully scripted, layout-checked variant:
-```bash
-.venv/bin/python poster/make_poster_charts.py     # poster-palette figures -> poster/figs/
-.venv/bin/python poster/build_poster.py           # A1/A0 poster + 4 slides (16:9)
-```
+**Old matplotlib builder** (`make_poster_charts.py` + `build_poster.py`) was the first iteration of the
+poster. Its rendered artifacts (`poster_det_rtdetr_*`, `slide_*`) were **removed** on 2026-10-21 when the
+HTML pipeline took over; the scripts stay for reference and can regenerate them on demand
+(`build_poster.py --slides`).
 It prints a layout report (`[layout] no overlaps` or a collision list) - run it after every copy edit.
 
 ## Honesty rules (the diary's core rule)

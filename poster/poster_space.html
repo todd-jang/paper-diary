@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NMS-Free Real-Time Detection: DETR to RT-DETR — Landscape</title>
+  <link rel="stylesheet" href="poster_space.css">
+</head>
+<body>
+  <main class="poster">
+
+    <!-- ══════════════ LEFT RAIL ══════════════ -->
+    <header class="hero">
+      <div class="eyebrow">Object Detection · Set Prediction · Real Time</div>
+      <h1>NMS-Free<br>Real-Time Detection</h1>
+      <p class="subtitle">DETR → RT-DETR: moving duplicate suppression from post-processing into the loss, and the compute bottleneck into the architecture.</p>
+
+      <p class="thesis"><b>Central claim</b> — one-to-one Hungarian matching learns duplicate suppression, so NMS disappears. RT-DETR keeps that principle and re-engineers encoder, query learning, and decoder depth for real time.</p>
+
+      <div class="stats">
+        <div class="stat"><b>42.0</b><span>DETR R50 AP · 41M params</span></div>
+        <div class="stat"><b>53.1</b><span>RT-DETR R50 AP · 42M</span></div>
+        <div class="stat"><b>108</b><span>FPS · T4 · TensorRT FP16</span></div>
+        <div class="stat"><b>34.8</b><span>AP<sub>S</sub> · small-object gap</span></div>
+      </div>
+
+      <div class="journey">
+        <div><b>Problem</b><span>Anchors · duplicate boxes · NMS cost</span></div><span class="arrow">›</span>
+        <div><b>DETR</b><span>Set prediction · optimal one-to-one matching</span></div><span class="arrow">›</span>
+        <div><b>RT-DETR</b><span>Efficient encoder · better queries · tunable depth</span></div>
+      </div>
+
+      <p class="footnote">
+        Carion et al., ECCV 2020 — arXiv:2005.12872 &nbsp;·&nbsp; Lv et al., CVPR 2024 — arXiv:2304.08069<br>
+        Code: github.com/facebookresearch/detr · github.com/lyuwenyu/rt-detr<br>
+        Figures: our Day 07–08 measurements (synthetic, CPU) unless a paper table is cited.
+      </p>
+    </header>
+
+    <!-- ══════════════ RIGHT GRID ══════════════ -->
+    <section class="grid">
+
+      <article class="card">
+        <h2><small>01 · Starting point</small>What changed in DETR?</h2>
+        <p>Conventional detectors emit many proposals or anchors and let <b>NMS heuristics</b> remove duplicates. DETR predicts the object <b>set</b> in one pass.</p>
+        <div class="flow">
+          <div class="node">Backbone<br>features</div><span class="arrow">›</span>
+          <div class="node">Transformer<br>global context</div><span class="arrow">›</span>
+          <div class="node">100 queries<br>parallel decode</div>
+        </div>
+        <h3>Matching before the loss</h3>
+        <p>The Hungarian algorithm finds the <b>globally optimal one-to-one</b> assignment between prediction slots and ground-truth objects, so duplicates become structurally impossible.</p>
+        <div class="formula">L = L<sub>class</sub> + λ<sub>1</sub>L<sub>1</sub> + λ<sub>G</sub>L<sub>GIoU</sub></div>
+        <p>Matching cost uses <strong>probabilities</strong> (bounded, commensurable with the box term); the loss uses <strong>log-likelihoods</strong>. Under the same 15% relative error, L1 penalises a large box <b>9.44×</b> more than a small one, while GIoU stays at <b>1.000×</b>.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>02 · The NMS dilemma</small>Two thresholds, one trade-off</h2>
+        <p>Paper Table 1 (YOLOv8, T4 · TensorRT FP16): raising the confidence threshold removes candidates — <b>faster but less accurate</b>; raising the IoU threshold suppresses fewer boxes — <b>more accurate but slower</b>.</p>
+        <table>
+          <thead><tr><th>Control</th><th>AP</th><th>NMS</th></tr></thead>
+          <tbody>
+            <tr><td>conf 0.001 → 0.05</td><td>52.9 → 51.2</td><td>2.36 → 1.06 ms</td></tr>
+            <tr><td>IoU 0.5 → 0.8</td><td>52.1 → 52.8</td><td>2.24 → 2.46 ms</td></tr>
+          </tbody>
+        </table>
+        <p>YOLO papers report model speed <b>excluding</b> NMS time, so RT-DETR builds an end-to-end benchmark (§3.2) with the NMS plugin included.</p>
+        <figure>
+          <img src="runs/figures/nms-tradeoff-en.png" alt="NMS threshold trade-off">
+          <figcaption><b>Fig. 1.</b> NMS cost model — our measurement; direction matches paper Table 1.</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>03 · Bottleneck → design</small>Why is AIFI only on S5?</h2>
+        <p>In Deformable-DETR the encoder consumes <b>49% of GFLOPs</b> for <b>11% of AP</b> (a second-hand statistic, not our measurement). RT-DETR re-architects it:</p>
+        <p><span class="tag">AIFI</span>self-attention on <b>S5 only</b> (400 tokens)<br><span class="tag">CCFF</span>conv-based cross-scale fusion (linear cost)</p>
+        <p>Attention cost grows with <b>M²</b>: 8400 candidate tokens vs 400 on S5 is a <b>441×</b> gap. Variant <b>D_S5</b>: latency <b>−35%</b> and AP <b>+0.4</b>.</p>
+        <figure>
+          <img src="runs/figures/encoder-variants-en.png" alt="Hybrid encoder variants">
+          <figcaption><b>Fig. 2.</b> Encoder variants — paper Table 3; our latency order reproduces it exactly.</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>04 · Query quality</small>What does uncertainty change?</h2>
+        <p>U = ‖P − C‖ — the mismatch between the <b>location</b> and <b>classification</b> prediction of a feature — enters the loss, so the encoder learns features that agree in both.</p>
+        <p><span class="tag">AP</span>47.9 → <b>48.7</b> &nbsp; <span class="tag sky">Prop cls</span>0.35% → <b>0.82%</b> &nbsp; <span class="tag violet">Prop both</span>0.30% → <b>0.67%</b></p>
+        <p><b>Selection ≠ objective:</b> the public top-K still ranks by class score (<code>rtdetr_decoder.py:491</code>) — uncertainty changes the <b>loss</b>, not the ranking.</p>
+        <figure>
+          <img src="runs/figures/uncertainty-objective-en.png" alt="Uncertainty objective degeneracy">
+          <figcaption><b>Fig. 3.</b> Uncertainty alone has a degenerate optimum — our measurement.</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>05 · Inference control</small>Tune speed with depth</h2>
+        <p>Auxiliary heads train <b>every</b> decoder layer, so inference can stop early <b>without retraining</b>. Paper Table 5 (Det 6): 6 layers 53.1 AP / 9.3 ms → 5 layers 53.0 / 8.8 ms → 1 layer 49.1 / 7.0 ms.</p>
+        <p>Cost per layer is nearly constant (0.4–0.5 ms) while the accuracy gain shrinks with depth (+2.2 AP at layer 1→2, only +0.1 at 5→6).</p>
+        <div class="chips">
+          <span class="chip">eval_idx = which layer</span>
+          <span class="chip">max_det = output cap</span>
+          <span class="chip">lower max_det ≠ faster</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2><small>06 · Results</small>Accuracy and speed together</h2>
+        <table>
+          <thead><tr><th>Model</th><th>AP</th><th>AP<sub>S</sub></th><th>AP<sub>L</sub></th><th>FPS</th></tr></thead>
+          <tbody>
+            <tr><td>DETR R50</td><td>42.0</td><td>20.5</td><td class="hi">61.1</td><td>28</td></tr>
+            <tr><td>RT-DETR R50</td><td class="hi">53.1</td><td class="mint">34.8</td><td class="hi">70.0</td><td class="hi">108</td></tr>
+          </tbody>
+        </table>
+        <p>Same parameter count as Faster R-CNN-FPN+, but the scale profile flips: <b>AP<sub>S</sub> −5.5</b>, <b>AP<sub>L</sub> +7.8</b>. RT-DETR: <b>+2.2 AP and 21× faster</b> than DINO-Deformable (5 → 108 FPS).</p>
+        <figure>
+          <img src="runs/figures/ap-vs-fps-en.png" alt="Accuracy versus real-time speed">
+          <figcaption><b>Fig. 4.</b> Accuracy vs real-time speed — paper Table 2 (NMS included for YOLO baselines).</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>07 · Open limits</small>What remains unresolved</h2>
+        <ul class="limits">
+          <li><b>Small objects stay weak</b> — AP<sub>S</sub> 34.8 (−0.5 vs YOLOv8-L; R101 −0.9): the cost of restricting global attention to S5 while keeping multi-scale features.</li>
+          <li><b>49% / 11% is a second-hand statistic</b> — cited, not measured by us.</li>
+          <li><b>138% / 120% are relative counts</b>, not percentage-point gains.</li>
+          <li><b>2D COCO only</b> — depth, BEV and multi-view remain untested.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2><small>08 · Study process</small>Claim → evidence → boundary</h2>
+        <p>8 study days, 16 deep-dive documents, 4 runnable demos, 22 charts, <b>0 citation errors</b>. Each claim was checked against the original table or equation, then probed with our own matching / NMS / attention / query-loss experiments.</p>
+        <p>Those checks are <b>CPU, synthetic, direction-only</b> — they are not reproductions of the paper's COCO/GPU numbers.</p>
+        <h3>Next</h3>
+        <div class="chips">
+          <span class="chip">GLIP + SAM</span>
+          <span class="chip">CLIP</span>
+          <span class="chip">LLaVA ×2</span>
+          <span class="chip">VL-JEPA</span>
+          <span class="chip">3D: DETR3D → PETR → Sparse4D</span>
+        </div>
+        <p class="formula">Move duplicates into the loss · compute into the architecture · initialization into quality</p>
+      </article>
+
+      <article class="card">
+        <h2><small>09 · Evidence at a glance</small>Our own measurements</h2>
+        <p>Four checks that support the design decisions, all reproduced locally:</p>
+        <p><span class="tag">A</span>greedy vs optimal matching: duplicates <b>31.6%</b>, greedy never wins<br>
+           <span class="tag">B</span>attention cost: 8× tokens → <b>42.3×</b> time (theory 64×)<br>
+           <span class="tag coral">C</span>uncertainty alone: s 0.90 → <b>0.690</b> (degenerate)<br>
+           <span class="tag sky">D</span>encoder latency order = paper order</p>
+        <figure>
+          <img src="runs/figures/l1-giou-scale-en.png" alt="L1 and GIoU scale sensitivity">
+          <figcaption><b>Fig. 5.</b> L1 scales with box size, GIoU does not — our measurement.</figcaption>
+        </figure>
+      </article>
+
+    </section>
+  </main>
+</body>
+</html>

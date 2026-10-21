@@ -82,6 +82,7 @@ def main() -> int:
     ap.add_argument("--html", default="poster_en.html")
     ap.add_argument("--min-font-px", type=float, default=9.5)
     ap.add_argument("--size", default="A1", help="sheet size used for the PDF check")
+    ap.add_argument("--tag", default="en", help="artifact tag used for the PDF check")
     args = ap.parse_args()
     src = os.path.join(HERE, args.html)
     if not os.path.exists(src):
@@ -137,7 +138,7 @@ def main() -> int:
         print(f"  [OK] no text below {args.min_font_px}px")
 
     # PDF sanity
-    pdf = os.path.join(RUNS, f"poster_en_{args.size}.pdf")
+    pdf = os.path.join(RUNS, f"poster_{args.tag}_{args.size}.pdf")
     if os.path.exists(pdf):
         try:
             from pypdf import PdfReader
@@ -150,7 +151,8 @@ def main() -> int:
             broken = re.findall(r"[\u25a1\ufffd]", txt)
             print(f"  PDF: pages={len(r.pages)} size={w_mm}x{h_mm}mm  chars={len(txt)}  "
                   f"hangul={len(ko)}  brokenGlyph={len(broken)}")
-            want = {"A0": (841, 1189), "A1": (594, 841), "A2": (420, 594)}[args.size]
+            want = {"A0": (841, 1189), "A1": (594, 841), "A2": (420, 594),
+                    "A1L": (841, 594)}[args.size]
             if len(r.pages) != 1 or (w_mm, h_mm) != want:
                 problems += 1
                 print(f"  [FAIL] PDF is not a single {args.size} page")

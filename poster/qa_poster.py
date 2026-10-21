@@ -152,7 +152,7 @@ def main() -> int:
             print(f"  PDF: pages={len(r.pages)} size={w_mm}x{h_mm}mm  chars={len(txt)}  "
                   f"hangul={len(ko)}  brokenGlyph={len(broken)}")
             want = {"A0": (841, 1189), "A1": (594, 841), "A2": (420, 594),
-                    "A1L": (841, 594)}[args.size]
+                    "A1L": (841, 594), "A0L": (1189, 841)}[args.size]
             if len(r.pages) != 1 or (w_mm, h_mm) != want:
                 problems += 1
                 print(f"  [FAIL] PDF is not a single {args.size} page")

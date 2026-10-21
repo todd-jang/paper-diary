@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PhysLLM — Residual Dynamics from Pilot to 117B-scale MoE Routing</title>
+  <link rel="stylesheet" href="poster_space.css">
+  <style>
+    /* combined PhysLLM poster: hero rail + 4x4 grid (16 cards) */
+    .grid { grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+    .card { padding: 3.4mm 3.8mm; }
+    .card h2 { font-size: 11pt; }
+    .card h2 small { font-size: 7.4pt; }
+    .card h3 { font-size: 9.2pt; margin: 1.8mm 0 1mm; }
+    .card p, .card li { font-size: 8.5pt; line-height: 1.44; margin-bottom: 1.3mm; }
+    .card figure img { max-height: 33mm; }
+    .card figcaption { font-size: 7.2pt; }
+    .card table { font-size: 7.6pt; }
+    .card .tag { font-size: 7.3pt; padding: .6mm 1.9mm; }
+    .formula { font-size: 8.6pt; padding: 1.8mm 2.2mm; margin: 1.1mm 0; }
+    .flow { gap: 1.1mm; margin: 1.1mm 0 1.3mm; }
+    .flow .node { font-size: 7pt; padding: 1.5mm 1.5mm; }
+    .chip { font-size: 7.4pt; padding: .8mm 1.9mm; }
+    .stat b { font-size: 19pt; }
+    .stat span { font-size: 7.8pt; }
+    .card.wide { grid-column: span 2; }
+    .card.wide figure img { max-height: 46mm; }
+  </style>
+</head>
+<body>
+  <main class="poster">
+
+    <!-- ══════════ HERO ══════════ -->
+    <header class="hero">
+      <div class="eyebrow">PhysLLM · Generations G0 → N02 → N03</div>
+      <h1>PhysLLM:<br>Residual Dynamics<br>at Model Scale</h1>
+      <p class="subtitle">One measurement programme, three generations: a pilot, a frozen evaluation manifest, and MoE routing inside a 117B-parameter model — every number shipped with SHA-256 provenance.</p>
+
+      <p class="thesis"><b>Claim</b> — the residual stream of a transformer can be measured the same way at every scale, and the protocol (observables → manifest → gates → provenance) is what makes the numbers comparable across generations.</p>
+
+      <div class="stats">
+        <div class="stat"><b>3</b><span>generations: G0 · N02 · N03</span></div>
+        <div class="stat"><b>14.4k</b><span>text x block rows captured</span></div>
+        <div class="stat"><b>36</b><span>blocks · full / sliding attention</span></div>
+        <div class="stat"><b>128/4</b><span>experts per token (top-4)</span></div>
+      </div>
+
+      <div class="journey">
+        <div><b>G0</b><span>pilot on a Colab bundle</span></div><span class="arrow">›</span>
+        <div><b>N02</b><span>frozen observables + manifest</span></div><span class="arrow">›</span>
+        <div><b>N03</b><span>MoE routing-conditional</span></div>
+      </div>
+
+      <p class="footnote">
+        Artifacts: <b>physllm</b> · <b>physllmN02</b> · <b>PhysLLM_N03_Antigravity_Workspace</b><br>
+        All numbers are project measurements. Figures rendered from project artifacts; no project file was modified.
+      </p>
+    </header>
+
+    <!-- ══════════ 4×4 GRID ══════════ -->
+    <section class="grid">
+
+      <article class="card">
+        <h2><small>G0 · week 1</small>Pilot: is the residual stream measurable?</h2>
+        <p>First question: do layer-wise hidden-state norms and updates <b>Δh<sub>l</sub> = h<sub>l+1</sub> − h<sub>l</sub></b> come out finite and correctly shaped?</p>
+        <figure>
+          <img src="physllm_figs/g0_pilot.png" alt="PhysLLM G0 pilot output">
+          <figcaption><b>Fig. 1.</b> G0 pilot output (Colab bundle, Qwen3 finalization v1.0.4).</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>N02 · week 2</small>Three observables, frozen</h2>
+        <p>Small HF causal LMs (<b>gpt2</b>, <b>pythia-160m</b>, 12 blocks) instrumented block by block, with the observable set <b>frozen for traceability</b>:</p>
+        <p><span class="tag">1</span>length-adjusted update norm ‖h<sub>l+1</sub>−h<sub>l</sub>‖<sub>F</sub>/√T<br>
+           <span class="tag">2</span>input–update cosine cos(h<sub>l</sub>, Δh<sub>l</sub>)<br>
+           <span class="tag">3</span>output/input norm ratio</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N02 · result</small>Cosine flips sign with depth</h2>
+        <figure>
+          <img src="physllm_figs/physllm_cosine.png" alt="N02 layer-wise cosine and update norm">
+          <figcaption><b>Fig. 2.</b> N02 layer-wise summary (5 pilot prompts per model — descriptive, n=5).</figcaption>
+        </figure>
+        <p>Cosine rises, then <b>turns negative in the last blocks</b> (GPT-2 −0.769 at block 11; Pythia −0.840 at block 10).</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N02 · result</small>Attention vs MLP branch</h2>
+        <figure>
+          <img src="physllm_figs/physllm_branch.png" alt="N02 branch decomposition">
+          <figcaption><b>Fig. 3.</b> Final-block branch split; identity residual ≤ 2.3e-5 (GPT-2).</figcaption>
+        </figure>
+        <p>Attention dominates GPT-2 (cosine 0.37–0.43) while Pythia is MLP-dominant (0.72–0.76) — the same observable, two architectures.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N02 · protocol</small>Manifest before inference</h2>
+        <figure>
+          <img src="physllm_figs/physllm_manifest.png" alt="N02 main-evaluation manifest design">
+          <figcaption><b>Fig. 4.</b> Candidate manifest v1.0.3 (preflight: 0 hard-check failures).</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>N02 · honesty</small>What the pilot is not</h2>
+        <p>• The five pilot prompts are <b>excluded</b> from the main evaluation.<br>
+           • The earlier synthetic chart was <b>not real model data</b>.<br>
+           • N02's scientific hypothesis status stays <b>INCONCLUSIVE</b>; the baseline is frozen for traceability, not for claims.<br>
+           • 24 code texts carry no domain word; 12 share one template.<br>
+           • <b>frozen_for_confirmatory_analysis: false</b> — human review still pending.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · week 3</small>Three branches, one active</h2>
+        <p>N02 deferred three architecture families; N03 registers them as candidates and runs <b>M1 (MoE routing-conditional)</b>. M2 (MLA latent attention) and M3 (SSM / hybrid) stay <b>design-stage only</b> — no claim may use them yet.</p>
+        <figure>
+          <img src="physllm_figs/physllm_moe.png" alt="gpt-oss-120b MoE anatomy">
+          <figcaption><b>Fig. 5.</b> Target: <b>openai/gpt-oss-120b</b> — MXFP4 weights, bf16 activations.</figcaption>
+        </figure>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · observables</small>Routing, not just residuals</h2>
+        <p>Residual stream measures are inherited from N02; N03 adds the branch split and the router:</p>
+        <p><span class="tag">attn_share</span>attn²/(attn²+moe²) of the pre-residual output<br>
+           <span class="tag">routing</span>top-4 expert ids + gate weights (softmax over the <b>top-k logits</b>, not the full 128)<br>
+           <span class="tag">entropy</span>routing entropy and H/ln k (k = 4)<br>
+           <span class="tag">load</span>per-text/layer expert load histogram</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · result</small>Residual ratio falls, routing stays flat</h2>
+        <figure>
+          <img src="physllm_figs/physllm_n03_bands.png" alt="N03 depth band summary">
+          <figcaption><b>Fig. 6.</b> Depth-band summary over 36 blocks; mean normalized entropy 0.968.</figcaption>
+        </figure>
+        <p>Output/input ratio <b>1.351 → 1.234 → 1.137</b> across early/middle/late blocks, while routing entropy stays near uniform (H/ln4 ≈ 0.95–0.98).</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · infrastructure</small>80 GB is a hard wall</h2>
+        <p>MXFP4 weights ≈ <b>60.8 GB</b>; 8K context ≈ 65.8 GB, 32K ≈ 68.6 GB.</p>
+        <p>Minimum: <b>one</b> 80 GB GPU (A100 80GB / H100 80GB / MI300X). L4 24GB, T4 16GB, A100 40GB are insufficient. Runtime: Triton ≥ 3.4, compute capability ≥ 7.5.</p>
+        <p>Development uses <b>gpt-oss-20b</b> (~16 GB) only for pipeline wiring.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · gates</small>Provenance is enforced, not documented</h2>
+        <p>Every capture must pass the dataset gates (<b>G1, M1–M5, P1</b>) and ships provenance:</p>
+        <p><span class="tag">sha</span>manifest SHA-256 · code SHA + git revision/dirty<br>
+           <span class="tag">meta</span>tokenizer ID · activation dtype · seed 0 · package versions<br>
+           <span class="tag">tests</span>30 gate tests passing (incl. an independent routing recomputation)</p>
+        <p>Resume is idempotent and refuses to append into an out-dir captured from a different manifest.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · audit</small>T0: three texts out of band</h2>
+        <p>The tokenizer audit recomputes token counts for every candidate text. <b>gpt2</b> and <b>pythia-160m</b> come back clean (0 mismatches).</p>
+        <p><b>gpt-oss leaves 3 long-tier texts out of band</b> (127–128 tokens against a 129 floor) — and they are not random: 11 of 33 long × question_dialogue texts now sit within 2 tokens of the floor, while other long styles clear it by 21+ tokens.</p>
+        <p>Options A / B / B' / C are quantified in the decision memo — <b>choice pending</b>.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>N03 · status</small>Done vs pending</h2>
+        <p><b>Done:</b> scope declaration, M1 capture script, gate tests, notebook simulator, real end-to-end capture on a tiny checkpoint (CPU, both transformers families), per-token routing artifact for 400 texts, T0 audit.</p>
+        <p><b>Pending:</b> T0 option choice · the paid 80 GB session · repository approval.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>Across generations</small>What carries forward</h2>
+        <p>One observable definition survives every generation:</p>
+        <div class="formula">Δh<sub>l</sub> = h<sub>l+1</sub> − h<sub>l</sub> &nbsp;·&nbsp; ‖Δh<sub>l</sub>‖<sub>F</sub>/√T &nbsp;·&nbsp; cos(h<sub>l</sub>, Δh<sub>l</sub>)</div>
+        <p>G0 asked whether it is measurable, N02 froze <b>what</b> to measure and <b>how</b> to sample, N03 reuses both and adds the router — with the same gates, the same SHA-256 discipline and the same habit of stating the limits next to the number.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>Limits</small>Stated next to the numbers</h2>
+        <p>• Exploratory <b>descriptive</b> statistics — no causal or topic-clustered inference.<br>
+           • No independent validation against the model's real router dispatch or an fp32 reference run.<br>
+           • Candidate manifest <b>not frozen</b> for confirmatory analysis.<br>
+           • N02 pilot is 5 prompts per model; N03 blocks are a capture, not a behavioural claim.<br>
+           • Max relative branch-identity residual 0.0187 (N03) · 2.3e-5 (N02).</p>
+      </article>
+
+    </section>
+  </main>
+</body>
+</html>

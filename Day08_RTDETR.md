@@ -60,6 +60,12 @@
 
 Table 1은 NMS에서 정확도와 후처리 시간 사이의 절충을 보여줍니다. IoU 임계값을 0.7로 고정하면 confidence 임계값을 0.001→0.05로 높일 때 AP는 52.9→51.2로 내려가지만 NMS 시간은 2.36→1.06ms로 줄어듭니다. 낮은 점수 후보를 많이 버려 후처리가 빨라지는 대신, 일부 진짜 객체까지 제거되어 AP가 낮아질 수 있습니다. 반대로 confidence를 0.001로 고정하고 IoU 임계값을 0.5→0.8로 높이면 AP는 52.1→52.8로 오르지만 NMS 시간은 2.24→2.46ms로 늘어납니다. 겹치는 박스를 덜 억제해 검출을 보존하는 대신, 더 많은 후보를 반복 처리하기 때문입니다. DETR 계열의 NMS-free 방식은 중복을 추론 후 임계값으로 걸러내는 대신, 학습 때 헝가리안 일대일 매칭으로 정답 객체마다 하나의 예측을 대응시켜 중복 억제를 모델이 배우게 합니다. 따라서 이 절충을 NMS 임계값 조절로 풀 필요가 없어지는 것이지, 정확도와 속도 사이의 모든 절충이 사라진다는 뜻은 아닙니다. 표의 시간은 전체 추론 시간이 아니라 NMS 커널 시간이라는 점도 구분해야 합니다. (RT-DETR 논문, §3.1, Table 1)
 
+#### Q1(b). (b) 편 — end-to-end speed benchmark가 필요한 이유
+
+(2026-10-21 저녁 세션 · 1차)
+
+End-to-end speed benchmark가 필요한 이유는 검출기의 실제 지연시간이 모델 계산만으로 결정되지 않기 때문입니다. RT-DETR 논문 §3.1은 YOLO가 통상 모델 속도를 보고하면서 NMS 시간을 제외한다고 지적합니다. 그런데 NMS 시간은 입력별 후보 박스 수와 confidence·IoU 임계값에 따라 달라집니다. 따라서 모델 추론 시간만 비교하면, 임계값에 따라 달라지는 후처리 비용을 빠뜨려 실제 속도 비교가 불완전해집니다. 논문 §3.2는 COCO val2017에서 여러 이미지의 평균 시간을 재고 YOLO에 TensorRT NMS 플러그인을 붙여 end-to-end benchmark를 구성합니다. 또한 정확도 측정에 사용한 임계값을 적용하고 I/O와 메모리 복사 시간은 제외해 비교 조건을 정했습니다. 즉 이 benchmark는 후처리까지 포함한 검출 파이프라인의 속도를 맞춰 비교하기 위한 것입니다. 다만 그 결과 역시 COCO val2017, T4 GPU, TensorRT FP16 및 해당 설정에 한정되므로 다른 하드웨어나 데이터셋에서의 절대 속도를 보장하지 않습니다.
+
 
 ## 🔍 자기점검 (답변 직후 스스로)
 
@@ -90,7 +96,7 @@ Table 1은 NMS에서 정확도와 후처리 시간 사이의 절충을 보여줍
 - **(ii) 근거 96.** 인용 수치 **52.9 / 51.2 / 2.36 / 1.06 / 52.1 / 52.8 / 2.24 / 2.46**이 Table 1과 **문자 단위로 일치**. 고정 조건(IoU 0.7 고정 / conf 0.001 고정)도 명시해 표를 정확히 읽었다. **보강 권고 2건**: ① 논문의 **메커니즘 문장을 직인용**하면 근거가 더 단단해진다 — *"the high confidence threshold directly filters out more prediction boxes, whereas the high IoU threshold filters out fewer prediction boxes in each round of screening."* ② 논문은 **최고 AP 설정이 동시에 가장 느리다**고 명시한다 — *"With a confidence threshold of 0.001 and an IoU threshold of 0.7, YOLOv8 achieves the best AP results, but the corresponding NMS time is at a higher level."* 이 한 줄을 넣으면 "절충"의 구조가 한 문장으로 닫힌다. (③ §3.2의 **anchor-based가 박스를 3배 더 낸다**는 사실은 (b)의 손잡이 논리와 이어지므로 거기로.)
 - **(iii) 경계 조건 97.** ① "모든 절충이 사라지는 것은 아니다"는 과대 주장 차단, ② **"표의 시간은 NMS 커널 시간이지 전체 추론 시간이 아니다"**는 이 문항의 핵심 측정 경계. 논문도 *"we only report the execution time of the EfficientNMS kernel"*라고 명시한다. 두 경계가 모두 정확.
 
-**남은: Q1(b)·(c)·(d) 대기.** (b) end-to-end speed benchmark의 필요성(§3.2: YOLO는 보통 NMS 시간을 **제외한** 모델 속도만 보고, anchor-based는 박스를 3배 더 냄) · (c) NMS-free의 대가(Video Object Detection) · (d) 실습 [A]의 방향 일치와 절대값 비교 불가.
+**남은: Q1(c)·(d) 대기.** (b) 보완 권고: §3.2의 'anchor-based가 박스를 3배 더 낸다' + Table 2의 속도 순서. (b) end-to-end speed benchmark의 필요성(§3.2: YOLO는 보통 NMS 시간을 **제외한** 모델 속도만 보고, anchor-based는 박스를 3배 더 냄) · (c) NMS-free의 대가(Video Object Detection) · (d) 실습 [A]의 방향 일치와 절대값 비교 불가.
 
 ## 🧩 핵심 메모 (정답 요약 — 학생 답변 후에만 읽기)
 

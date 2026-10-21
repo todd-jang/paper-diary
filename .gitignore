@@ -8,3 +8,4 @@ __pycache__/
 # 논문 원문 원본(대용량) — 텍스트 추출물(.txt)만 커밋
 day07_detr/src/*.html
 day07_detr/src/*.pdf
+day08_rtdetr/src/*.pdf

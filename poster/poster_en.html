@@ -66,6 +66,9 @@
           <div class="callout"><b>Boundary:</b> The paper does not evaluate Video Object Detection, cross-frame identity association, or frame-level IoU. NMS-free detection is not evidence that temporal tracking is solved.</div>
         </article>
 
+      </div>
+
+      <div class="column">
         <article class="card mint">
           <h2><small>03 · PERFORMANCE CONTEXT</small> DETR by object scale</h2>
           <p>DETR has similar overall AP to Faster R-CNN-FPN+, yet its scale-wise profile differs: stronger on large objects and weaker on small objects.</p>
@@ -73,14 +76,7 @@
             <img src="runs/figures/detr-ap-scale-en.png" alt="DETR AP by object scale">
             <figcaption><b>Fig. 3.</b> DETR vs Faster R-CNN — scale breakdown from paper Table 1. AP<sub>S</sub> −5.5; AP<sub>L</sub> +7.8.</figcaption>
           </figure>
-          <figure>
-            <img src="runs/figures/ap-vs-fps-en.png" alt="Accuracy versus real-time speed across detectors">
-            <figcaption><b>Fig. 4.</b> Accuracy vs real-time speed — paper Table 2. RT-DETR is the only model in the top-right: highest AP and 108 FPS on T4 (TensorRT FP16, bs=1). NMS time is included for the YOLO baselines.</figcaption>
-          </figure>
         </article>
-      </div>
-
-      <div class="column">
         <article class="card teal">
           <h2><small>04 · BOTTLENECK → DESIGN</small> Why is AIFI applied only to S5?</h2>
           <p>RT-DETR §3.2 cites a Deformable-DETR encoder accounting for <b>49% of GFLOPs</b> but only <b>11% of AP contribution</b>. This is a second-hand statistic from prior work—not a measurement of RT-DETR itself.</p>
@@ -160,6 +156,10 @@
           </tbody>
         </table>
         <p>Conditional context: RT-DETR uses 640×640 and 72 epochs; DETR uses 800×1333 and 500 epochs. Different input sizes and schedules mean these are not controlled absolute speed/accuracy comparisons.</p>
+        <figure>
+          <img src="runs/figures/ap-vs-fps-en.png" alt="Accuracy versus real-time speed across detectors">
+          <figcaption><b>Fig. 4.</b> Accuracy vs real-time speed — paper Table 2. RT-DETR is the only model in the top-right: highest AP at 108 FPS on T4 (TensorRT FP16, bs=1). NMS time is included for the YOLO baselines.</figcaption>
+        </figure>
       </article>
       <article class="card amber">
         <h2><small>08 · OPEN LIMITS</small> What remains unresolved?</h2>

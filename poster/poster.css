@@ -144,6 +144,8 @@ h1 {
 }
 
 .column { display: flex; flex-direction: column; gap: 5mm; min-width: 0; }
+/* last card stretches so the three columns end flush (no empty column bottoms) */
+.column > .card:last-child { flex: 1 1 auto; }
 
 .card {
   min-width: 0;

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NMS-Free Real-Time Detection: DETR to RT-DETR</title>
+  <link rel="stylesheet" href="poster.css">
+</head>
+<body>
+  <main class="poster">
+    <header class="hero">
+      <div class="eyebrow">Object Detection · Set Prediction · Real Time</div>
+      <h1>NMS-Free Real-Time Detection: DETR → RT-DETR</h1>
+      <p class="subtitle">Move duplicate suppression from post-processing into learning—and redesign the compute bottleneck</p>
+      <div class="thesis"><b>Central claim</b> — DETR learns duplicate suppression through one-to-one Hungarian matching. RT-DETR retains this principle while redesigning the encoder, query learning, and decoder for real-time inference.</div>
+      <div class="stats">
+        <div class="stat"><b>42.0</b><span>DETR R50 AP</span></div>
+        <div class="stat"><b>53.1</b><span>RT-DETR R50 AP</span></div>
+        <div class="stat"><b>108</b><span>FPS · T4 · TensorRT FP16</span></div>
+        <div class="stat"><b>34.8</b><span>RT-DETR AP<sub>S</sub> · small-object gap</span></div>
+      </div>
+    </header>
+
+    <section class="journey">
+      <div><b>Problem</b><span>Anchors · duplicate boxes · NMS cost</span></div><span class="arrow">›</span>
+      <div><b>DETR</b><span>Set prediction · optimal one-to-one matching</span></div><span class="arrow">›</span>
+      <div><b>RT-DETR</b><span>Efficient encoder · better queries · tunable depth</span></div>
+    </section>
+
+    <section class="columns">
+      <div class="column">
+        <article class="card blue">
+          <h2><small>01 · STARTING POINT</small> What changed in DETR?</h2>
+          <p>Conventional detectors generate many proposals or anchors, then use heuristics and NMS to remove duplicates. DETR predicts the image’s object set in one pass.</p>
+          <div class="flow">
+            <div class="node blue-node">Image<br>backbone features</div><span class="arrow">›</span>
+            <div class="node teal-node">Transformer<br>global context</div><span class="arrow">›</span>
+            <div class="node amber-node">100 learned queries<br>parallel decoder</div><span class="arrow">›</span>
+            <div class="node coral-node">Object set<br>classes + boxes</div>
+          </div>
+          <h3>Matching before the loss</h3>
+          <p>The Hungarian algorithm finds the globally optimal one-to-one assignment between prediction slots and ground-truth objects. Each object is assigned to only one slot, training the model to produce a duplicate-free set without NMS.</p>
+          <div class="formula">L = L<sub>class</sub> + λ<sub>1</sub>L<sub>1</sub> + λ<sub>G</sub>L<sub>GIoU</sub></div>
+          <p>L1 directly penalizes coordinate error; GIoU supplies overlap and relative-geometry information. Under the same 15% relative error, practical check [B] measured a large/small L1 ratio of <b>9.44×</b>, versus <b>1.000×</b> for GIoU.</p>
+          <figure>
+            <img src="runs/figures/l1-giou-scale-en.png" alt="L1 and GIoU scale sensitivity experiment">
+            <figcaption><b>Fig. 1.</b> L1 and GIoU response to box scale — practical check [B], synthetic boxes.</figcaption>
+          </figure>
+        </article>
+
+        <article class="card coral">
+          <h2><small>02 · THE NMS DILEMMA</small> Accuracy–latency controls</h2>
+          <p>In RT-DETR Table 1’s YOLOv8 results, raising the confidence threshold removes more candidates: NMS gets faster, but AP drops. Raising the IoU threshold suppresses fewer boxes: AP rises, but processing takes longer.</p>
+          <table>
+            <thead><tr><th>Control</th><th>AP</th><th>NMS latency</th></tr></thead>
+            <tbody>
+              <tr><td>conf 0.001 → 0.05</td><td>52.9 → 51.2</td><td>2.36 → 1.06 ms</td></tr>
+              <tr><td>IoU 0.5 → 0.8</td><td>52.1 → 52.8</td><td>2.24 → 2.46 ms</td></tr>
+            </tbody>
+          </table>
+          <p>NMS-free inference removes this threshold trade-off from post-processing and relies on one-to-one matching during training. Since YOLO speed reports commonly exclude NMS, the paper establishes an end-to-end benchmark that includes the NMS plugin.</p>
+          <figure>
+            <img src="runs/figures/nms-tradeoff-en.png" alt="NMS threshold trade-off experiment">
+            <figcaption><b>Fig. 2.</b> Practical check [A]: CPU, synthetic data. Raising conf 0.001→0.25 reduced time 57.03→21.29 ms and AP proxy 1.000→0.933. Absolute values are not comparable to the paper; only the direction is.</figcaption>
+          </figure>
+          <div class="callout"><b>Boundary:</b> The paper does not evaluate Video Object Detection, cross-frame identity association, or frame-level IoU. NMS-free detection is not evidence that temporal tracking is solved.</div>
+        </article>
+
+        <article class="card mint">
+          <h2><small>03 · PERFORMANCE CONTEXT</small> DETR by object scale</h2>
+          <p>DETR has similar overall AP to Faster R-CNN-FPN+, yet its scale-wise profile differs: stronger on large objects and weaker on small objects.</p>
+          <figure>
+            <img src="runs/figures/detr-ap-scale-en.png" alt="DETR AP by object scale">
+            <figcaption><b>Fig. 3.</b> DETR vs Faster R-CNN — scale breakdown from paper Table 1. AP<sub>S</sub> −5.5; AP<sub>L</sub> +7.8.</figcaption>
+          </figure>
+          <figure>
+            <img src="runs/figures/ap-vs-fps-en.png" alt="Accuracy versus real-time speed across detectors">
+            <figcaption><b>Fig. 4.</b> Accuracy vs real-time speed — paper Table 2. RT-DETR is the only model in the top-right: highest AP and 108 FPS on T4 (TensorRT FP16, bs=1). NMS time is included for the YOLO baselines.</figcaption>
+          </figure>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card teal">
+          <h2><small>04 · BOTTLENECK → DESIGN</small> Why is AIFI applied only to S5?</h2>
+          <p>RT-DETR §3.2 cites a Deformable-DETR encoder accounting for <b>49% of GFLOPs</b> but only <b>11% of AP contribution</b>. This is a second-hand statistic from prior work—not a measurement of RT-DETR itself.</p>
+          <table>
+            <thead><tr><th>Table 3 variant</th><th>AP</th><th>Latency</th></tr></thead>
+            <tbody>
+              <tr><td>A · remove encoder</td><td>43.0</td><td>7.2 ms</td></tr>
+              <tr><td>B · single-scale Transformer</td><td>44.9</td><td>11.1 ms</td></tr>
+              <tr><td>C · multi-scale Transformer</td><td>45.6</td><td>13.3 ms</td></tr>
+              <tr><td>D · decouple interaction/fusion</td><td>46.4</td><td>12.2 ms</td></tr>
+              <tr><td>D<sub>S5</sub> · attention on S5 only</td><td>46.8</td><td>7.9 ms</td></tr>
+              <tr class="highlight"><td>E · AIFI + CCFF</td><td>47.9</td><td>9.3 ms</td></tr>
+            </tbody>
+          </table>
+          <p><b>D:</b> separating intra-scale interaction from cross-scale fusion is faster and more accurate than C. <b>D→D<sub>S5</sub>:</b> limiting attention to S5 cuts latency by about 35% and adds 0.4 AP.</p>
+          <p>AIFI applies self-attention to low-resolution, semantically rich S5 features; CNN-based CCFF fuses scales. The authors argue that lower-level features lack semantic concepts and risk “<i>duplication and confusion</i>” with high-level interactions.</p>
+          <div class="formula">Attention pairs ∝ M²<br>(8400 / 400)² = 441×</div>
+          <p>This is a theoretical token-pair comparison, not a 441× end-to-end latency claim. In practical check [B], 8× more tokens (400→3200) increased measured attention time by 42.3×.</p>
+          <figure>
+            <img src="runs/figures/encoder-variants-en.png" alt="RT-DETR encoder variant accuracy and latency">
+            <figcaption><b>Fig. 4.</b> Practical check [C] reproduces the paper’s latency order: A &lt; D<sub>S5</sub> &lt; E &lt; B &lt; D &lt; C. Absolute runtimes are not compared across hardware.</figcaption>
+          </figure>
+          <figure>
+            <img src="runs/figures/attention-scaling-en.png" alt="Attention cost scaling with tokens">
+            <figcaption><b>Fig. 5.</b> CPU attention time versus token count; computational motivation for concentrating attention on S5.</figcaption>
+          </figure>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card violet">
+          <h2><small>05 · QUERY QUALITY</small> What does uncertainty change?</h2>
+          <div class="formula">U(X) = ‖P<sub>location</sub>(X) − C<sub>class</sub>(X)‖</div>
+          <p>Equation (2) measures disagreement between localization and classification predictions. Equation (3) puts U in the training loss so encoder features used as queries learn better-aligned class and localization quality.</p>
+          <div class="metrics">
+            <div class="metric green"><b>47.9 → 48.7</b><span>AP · +0.8</span></div>
+            <div class="metric green"><b>0.35 → 0.82%</b><span>Prop cls</span></div>
+            <div class="metric green"><b>0.30 → 0.67%</b><span>Prop both</span></div>
+          </div>
+          <p>In Fig. 6, purple points concentrate in the upper-right, where both classification and IoU scores are high. The reported 138% and 120% are <b>relative count differences</b> under score thresholds—not percentage-point gains.</p>
+          <div class="callout"><b>Ranking ≠ loss:</b> Public code still ranks top-K by classification score. The key change is not inference-time ranking; it is training the encoder so that features selected by that ranking are higher quality.</div>
+          <figure>
+            <img src="runs/figures/uncertainty-objective-en.png" alt="Uncertainty degeneracy experiment">
+            <figcaption><b>Fig. 6.</b> In practical check [D], optimizing U alone led to the degenerate solution s 0.90→0.690 and q 0.20→0.693. Adding classification supervision avoids collapsing quality into mere score agreement.</figcaption>
+          </figure>
+        </article>
+
+        <article class="card amber">
+          <h2><small>06 · INFERENCE CONTROL</small> Tune speed with decoder depth</h2>
+          <p>Auxiliary prediction losses train intermediate decoder layers to predict, so inference can stop before the final layer.</p>
+          <table>
+            <thead><tr><th>Det<sup>6</sup> output</th><th>AP</th><th>Latency</th></tr></thead>
+            <tbody>
+              <tr><td>6 layers</td><td>53.1</td><td>9.3 ms</td></tr>
+              <tr><td>5 layers</td><td>53.0</td><td>8.8 ms</td></tr>
+              <tr><td>1 layer</td><td>49.1</td><td>7.0 ms</td></tr>
+            </tbody>
+          </table>
+          <p>Each layer adds roughly 0.4–0.5 ms, while AP gains shrink from +2.2 (layer 1→2) to +0.1 (5→6). For deployment, <code>eval_idx</code> chooses the decoder output; <code>max_det</code> separately caps returned detections.</p>
+          <figure>
+            <img src="runs/figures/decoder-depth-en.png" alt="Decoder depth accuracy and latency experiment">
+            <figcaption><b>Fig. 7.</b> Decoder depth provides a no-retraining inference-speed control.</figcaption>
+          </figure>
+          <div class="note">The Day 07 mini-demo sometimes showed slightly higher AP at 5 layers than at 6. Its synthetic data, few objects, and short training differ from the paper’s COCO experiment: structural reproduction is not reproduction of the AP curve.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="wide">
+      <article class="card coral">
+        <h2><small>07 · RESULTS</small> Faster and more accurate</h2>
+        <table>
+          <thead><tr><th>Model</th><th>AP</th><th>AP<sub>S</sub></th><th>AP<sub>L</sub></th><th>FPS</th></tr></thead>
+          <tbody>
+            <tr><td>DETR R50</td><td>42.0</td><td>20.5</td><td>61.1</td><td>28</td></tr>
+            <tr><td>RT-DETR R50</td><td>53.1</td><td>34.8</td><td>70.0</td><td>108</td></tr>
+          </tbody>
+        </table>
+        <p>Conditional context: RT-DETR uses 640×640 and 72 epochs; DETR uses 800×1333 and 500 epochs. Different input sizes and schedules mean these are not controlled absolute speed/accuracy comparisons.</p>
+      </article>
+      <article class="card amber">
+        <h2><small>08 · OPEN LIMITS</small> What remains unresolved?</h2>
+        <p>RT-DETR-R50 AP<sub>S</sub> is 34.8, 0.5 below YOLOv8-L at 35.3; R101 is 0.9 below its comparison model. The 49/11 statistic is second-hand, FPS depends on hardware/runtime, and the paper evaluates 2D COCO—not 3D depth estimation or multi-view detection.</p>
+      </article>
+      <article class="card teal">
+        <h2><small>09 · STUDY PROCESS</small> Claim → evidence → boundary</h2>
+        <p>We checked original tables and equations, then used matching, NMS, attention, and query-loss experiments to test directional claims. These CPU/synthetic checks are not reproductions of COCO/GPU paper results.</p>
+        <p><b>Takeaway:</b> Move duplicate suppression into learning, compute into the architecture, and initialization into quality.</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <strong>References and materials</strong>
+      <p>Carion et al., “End-to-End Object Detection with Transformers,” ECCV 2020, <a href="https://arxiv.org/abs/2005.12872">arXiv:2005.12872</a> · Lv et al., “DETRs Beat YOLOs on Real-time Object Detection,” CVPR 2024, <a href="https://arxiv.org/abs/2304.08069">arXiv:2304.08069</a>.</p>
+      <p>Experiment charts were regenerated from the Day 07 DETR and Day 08 RT-DETR metrics; all chart labels and captions are in English. CPU/synthetic mini-demo measurements are distinguished from paper results.</p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,66 +1,66 @@
-# 포스터 문안 (검증된 수치만 사용)
+# Poster copy (English, verified numbers only)
 
-> 각 블록의 본문. **굵게**는 강조(포스터에서 1~2개만), 인용은 논문 표/절 번호 병기.
+> Rules: (1) every number must be traceable to a paper table/section or to our own logged measurement;
+> (2) label the source (paper / our measurement / simulation) in the caption;
+> (3) compare only within one domain; (4) state the limitations too.
 
-## ① 제목
-**NMS 없이 실시간: DETR → RT-DETR**
-세트 예측이 정확도와 속도를 동시에 얻는 구조적 이유
-*(End-to-End Object Detection with Transformers, arXiv:2005.12872 · DETRs Beat YOLOs on Real-time Object Detection, arXiv:2304.08069)*
+## Title
+**NMS-Free Real-Time Detection: DETR -> RT-DETR**
+Why moving duplicate suppression from post-processing into the loss buys accuracy and speed at once
+*Carion et al., ECCV 2020, arXiv:2005.12872 · Lv et al., CVPR 2024, arXiv:2304.08069*
 
-## ② 문제 — NMS는 두 손잡이로 딜레마를 만든다
-YOLO 계열의 NMS는 **정확도와 시간이 반대 방향**으로 움직인다(논문 Table 1, T4·TensorRT FP16):
-- conf 0.001 → 0.05: **AP 52.9 → 51.2**, NMS 시간 **2.36 → 1.06ms** (낮은 점수 후보를 버려 빨라지지만 진짜 객체도 사라진다)
-- IoU 0.5 → 0.8: **AP 52.1 → 52.8**, NMS 시간 **2.24 → 2.46ms** (중복을 덜 억제해 검출은 보존되지만 더 많이 반복 처리한다)
+## 1. Problem - the NMS dilemma
+Two thresholds move accuracy and time in opposite directions (paper Table 1, T4 TensorRT FP16):
+- conf 0.001 -> 0.05: **AP 52.9 -> 51.2**, NMS time **2.36 -> 1.06 ms**
+- IoU 0.5 -> 0.8: **AP 52.1 -> 52.8**, NMS time **2.24 -> 2.46 ms**
+YOLO papers usually report model speed, excluding NMS time -> RT-DETR builds an end-to-end benchmark (§3.2).
 
-YOLO는 보통 NMS 시간을 **제외한** 모델 속도만 보고하므로, RT-DETR은 NMS 플러그인까지 포함한 end-to-end benchmark(§3.2)를 새로 세웠다.
+## 2. Method - three moves
+**(1) Duplicates -> loss (DETR §3.1).** Optimal bipartite matching assigns one prediction per GT, so
+duplicates become structurally impossible. Matching cost uses probabilities, the loss uses log-likelihoods.
+Box loss = scale-invariant GIoU + L1 (weights 2 / 5).
 
-## ③ 방법 — 세 번의 이동
-**(1) 중복 억제를 학습으로 (DETR, §3.1)**
-헝가리아리안 **최적 양자택일 매칭**이 GT마다 예측 하나만 배정 → NMS 없이 중복이 구조적으로 불가능. 매칭 비용은 **확률**(상한 [0,1]이라 박스 손실과 스케일이 맞음), 손실은 **로그 우도**(저확신 예측을 강하게 교정). 박스 손실은 **스케일 불변 GIoU** + L1(λ 2 / 5).
+**(2) Compute -> design (RT-DETR §4.2).** The encoder was 49% of GFLOPs but 11% of AP (cited stat).
+AIFI keeps attention only on S5 (400 tokens); CCFF fuses scales with convolutions.
+Table 3: variant D_S5 cuts latency 35% and adds 0.4 AP.
 
-**(2) 컴퓨트를 설계로 (RT-DETR, §4.2)**
-병목 진단: Deformable-DETR의 인코더가 **GFLOPs 49%**인데 AP 기여는 **11%**(인용 통계). → **AIFI**(의미가 모인 S5에 self-attention만, 400 토큰) + **CCFF**(conv 기반 스케일 융합, 선형 비용). Table 3: D_S5는 **지연 −35%에 AP +0.4**.
+**(3) Initialization -> quality (RT-DETR §4.3).** U = ||P - C|| (localization vs classification mismatch)
+enters the loss, so the encoder learns features that agree in both: AP 47.9 -> 48.7,
+Prop cls 0.35% -> 0.82%, Prop both 0.30% -> 0.67%. The *ranking* is unchanged (public code still uses
+class score for top-K).
 
-**(3) 초기화를 품질로 (RT-DETR, §4.3)**
-$U=\|\mathcal P-\mathcal C\|$(위치·분류 예측의 불일치)를 손실에 넣어 **분류와 위치가 일치하는 피처**를 학습 → 선택된 피처의 "분류 점수 > 0.5" 비율 **0.35% → 0.82%**, "둘 다 > 0.5" **0.30% → 0.67%**, AP **47.9 → 48.7**.
-*단, 랭킹은 그대로*: 공개 코드의 top-K는 분류 점수 기준(`rtdetr_decoder.py:491`).
+Auxiliary prediction heads make every decoder layer a usable predictor, so depth can be traded for
+latency without retraining (§5.4).
 
-**보조 예측 헤드**로 모든 디코더 층이 유효한 예측기 → **재학습 없이** 6층(53.1 AP/9.3ms) → 5층(53.0/8.8ms)으로 속도 조절(§5.4).
-
-## ④ 결과
+## 3. Results
 | | DETR (R50) | Faster R-CNN-FPN+ | RT-DETR (R50) |
 |---|---|---|---|
 | AP | 42.0 | 42.0 | **53.1** |
 | AP_S / AP_L | 20.5 / 61.1 | 26.6 / 53.4 | 34.8 / 70.0 |
-| 파라미터 | 41M | 42M | 42M |
-| FPS | 28 (800×1333) | 26 | **108** (T4·TensorRT FP16·640×640) |
+| Params | 41M | 42M | 42M |
+| FPS | 28 | 26 | **108** (T4, TensorRT FP16, 640x640) |
 
-- DETR은 동일 파라미터(41M vs 42M)에서 Faster R-CNN과 **AP 동급** — 대신 **AP_S −5.5 / AP_L +7.8**로 성질이 뒤집혔다.
-- RT-DETR은 DINO-Deformable-DETR 대비 **+2.2 AP, 21× FPS**(5 → 108).
-- **비교 조건 주의**: 입력 크기(640×640 vs 800×1333)·스케줄(72ep vs 500ep)·하드웨어가 다르므로 **절대값이 아니라 조건부 비교**다.
+- DETR matches Faster R-CNN at equal parameter count, but with **AP_S -5.5 / AP_L +7.8**.
+- RT-DETR: **+2.2 AP and 21x faster** than DINO-Deformable (5 -> 108 FPS).
+- **Conditional comparison**: 640x640 / 72 ep (RT-DETR) vs 800x1333 / 500 ep (DETR); absolute numbers
+  are not directly comparable.
 
-## ⑤ 우리의 실험 (자체 실측 — 합성 데이터, CPU)
-1. **인코더 변형 A~E의 지연 순서를 논문과 동일하게 재현**: A < D_S5 < E < B < D < C (논문 Table 3과 일치)
-2. **attention 비용의 이차 스케일링**: 토큰 8배 → 시간 **42.3배**(이론 64배). 640×640에서 후보 8400 토큰 vs S5 400 토큰 = **441배**의 토큰 쌍 차이
-3. **NMS 딜레마 두 방향 재현**: conf↑ → 시간↓·정확도↓ / IoU↑ → 시간↑·정확도↑
-4. **uncertainty의 퇴화 해 정량화**: U만 단독 최적화 시 분류 점수 0.90 → **0.690**, 품질 0.20 → **0.693**(서로 만나는 퇴화 해). 분류 손실을 병행하면 **0.794 / 0.793**으로 품질이 확신을 따라감
+## 4. Our own experiments (synthetic data, CPU)
+1. Latency order of encoder variants A-E reproduces the paper: A < D_S5 < E < B < D < C.
+2. Attention cost ~ M^2: 8x tokens -> **42.3x** time (theory 64x). 8400 vs 400 tokens = **441x** gap.
+3. NMS dilemma reproduced in both directions (conf up / IoU up).
+4. Uncertainty alone has a degenerate optimum: s 0.90 -> **0.690**, q 0.20 -> **0.693**; with the
+   classification loss, s 0.794 / q 0.793 (quality follows confidence).
 
-*한계: 합성 데이터·CPU·학습 없음(방향·순서만 검증, AP·지연 절대값은 비교 대상 아님)*
+*Limits: synthetic data, no training; only directions and orderings are verified, not AP or absolute latency.*
 
-## ⑥ 한계와 배운 것
-- **소형 객체는 여전히 약점**: RT-DETR-R50 AP_S 34.8(YOLOv8-L 35.3보다 −0.5), R101도 −0.9(논문 §6). 멀티스케일 특징을 쓰되 전역 attention을 S5에 제한한 설계의 대가
-- **인용 숫자의 지위**: 49/11은 **2차 통계**(RT-DETR ← Lin et al. ← Deformable-DETR 실측)
-- **상대 개수 vs 퍼센트포인트**: 논문의 138%·120%는 **상대 개수 차**이지 "+138%p"가 아니다(그림도 cls > 0.5 조건부)
-- **selection ≠ objective**: uncertainty는 **손실**을 바꿨고, 추론 랭킹은 분류 점수 그대로
-- **2D 전용**: 3D 검출(깊이 추정·BEV·멀티뷰)은 이 논문에서 검증되지 않았다 → 3D 트랙(DETR3D → PETR → StreamPETR → Sparse4D)으로 이어진다
+## 5. Limitations
+- Small objects remain weak: AP_S 34.8 (-0.5 vs YOLOv8-L; R101 -0.9) - the cost of restricting global
+  attention to S5 while keeping multi-scale features.
+- 49% GFLOPs / 11% AP is a **second-hand statistic**, not our measurement.
+- 138% / 120% are **relative counts**, not percentage-point gains.
+- **Selection != objective**: uncertainty changes the loss, not the ranking.
+- 2D COCO only: depth, BEV and multi-view remain untested (see the 3D track).
 
-## ⑦ 학습 흔적 · 다음
-- **8일 탐색**: D1 MAE → D2 BEiT/SimMIM → D3 iBOT/DINOv2 → D4~6 DeepSeek(V2/V3/R1) → **D7 DETR + RT-DETR 심화(96.6%)** → **D8 RT-DETR 본문(97.0%)**
-- **산출물**: 심화자료 16종 · 실행 데모 4종 · 자체 차트 22종 · 논문 대조 오류 0건
-- **다음**: GLIP + SAM(오픈셋 검출 → 프롬프트 분할) → CLIP → LLaVA(2일) → VL-JEPA, 3D 트랙 병행
-
-## ⑧ 한 줄 요약
-**중복 제거를 학습으로, 컴퓨트를 설계로, 초기화를 품질로 옮기면 실시간과 정확도를 함께 얻을 수 있다.**
-
----
-**참고문헌**: Carion et al., *End-to-End Object Detection with Transformers*, ECCV 2020 (arXiv:2005.12872) · Lv et al., *DETRs Beat YOLOs on Real-time Object Detection*, CVPR 2024 (arXiv:2304.08069) · 코드: github.com/facebookresearch/detr · github.com/lyuwenyu/rt-detr
+## 6. Takeaway
+**Move duplicate removal into the loss, move compute into the design, move initialization into quality.**

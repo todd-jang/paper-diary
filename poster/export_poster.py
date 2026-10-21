@@ -86,7 +86,7 @@ def export(html_name: str, size: str, tag: str, png_only: bool) -> list:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--html", default="poster_en.html")
-    ap.add_argument("--size", default="A0", choices=list(PAGE_MM))
+    ap.add_argument("--size", default="A1", choices=list(PAGE_MM))
     ap.add_argument("--tag", default="en")
     ap.add_argument("--png-only", action="store_true")
     args = ap.parse_args()

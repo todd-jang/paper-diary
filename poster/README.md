@@ -40,10 +40,13 @@ The poster source of truth is **`poster_en.html` + `poster.css`** (9 cards, hero
 
 ```bash
 cd /Users/robotjang/paper-diary
-.venv/bin/python poster/export_poster.py            # A0 PDF (841x1189mm) + PNG preview
-.venv/bin/python poster/export_poster.py --size A1  # A1 (594x841mm)
+.venv/bin/python poster/export_poster.py             # **A1 (594x841mm) = 최종 제출본** + PNG 미리보기
+.venv/bin/python poster/export_poster.py --size A0   # A0 (841x1189mm) 원본 크기
 .venv/bin/python poster/export_poster.py --html poster_ko.html --tag ko
+.venv/bin/python poster/qa_poster.py                # 구조 QA (A1 PDF 기준, PASS 여부)
 ```
+Sheet choice: the CSS pins the layout to A0 (841x1189mm); smaller sheets are a **uniform scale** of that
+layout, and the A1 preset additionally enlarges type and tightens gaps so the sheet stays legible.
 One-time setup (already done): `.venv/bin/python -m pip install playwright && .venv/bin/python -m playwright install chromium`
 
 **Alternative (matplotlib) builder** - useful for a fully scripted, layout-checked variant:

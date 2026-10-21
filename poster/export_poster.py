@@ -66,12 +66,12 @@ def export(html_name: str, size: str, tag: str, png_only: bool) -> list:
         if size == "A1L":
             # landscape design carries its own page box (841x594mm) - do not force the A0 box
             page.add_style_tag(content="""
-                html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+                html, body { margin: 0 !important; padding: 0 !important; }
                 .poster { margin: 0 !important; box-shadow: none !important; }
             """)
         else:
             page.add_style_tag(content=f"""
-                html, body {{ margin: 0 !important; padding: 0 !important; background: #fff !important; }}
+                html, body {{ margin: 0 !important; padding: 0 !important; }}
                 .poster {{ margin: 0 !important; box-shadow: none !important;
                            width: {PAGE_MM["A0"][0]}mm !important;
                            min-height: {PAGE_MM["A0"][1]}mm !important;

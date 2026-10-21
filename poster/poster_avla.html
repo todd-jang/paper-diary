@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AVLA PoC — Audio-Visual-Language Alignment Pipeline for Autonomous Driving</title>
+  <link rel="stylesheet" href="poster.css">
+</head>
+<body>
+  <main class="poster">
+    <header class="hero">
+      <div class="eyebrow">AIFFELTHON · Spatial AVLA · PoC Baseline</div>
+      <h1>AVLA: Audio–Vision–Language Alignment for Event Triggering</h1>
+      <p class="subtitle">A LangGraph DAG that turns siren detection, DOA tracking and visual anomaly into one VLM-ready context frame</p>
+      <div class="thesis"><b>Contribution</b> — a contract-first, schema-validated pipeline (S<sub>I</sub> → [S<sub>A</sub> ‖ S<sub>T</sub> ‖ S<sub>V</sub>] → S<sub>B</sub> → S<sub>C</sub>) with a 2×2 live operator UI, measured end-to-end on real dashcam and real siren recordings.</div>
+      <div class="stats">
+        <div class="stat"><b>3.06</b><span>ms p50 UI fast path (target &lt; 33 ms)</span></div>
+        <div class="stat"><b>0</b><span>schema errors · All_OK = True</span></div>
+        <div class="stat"><b>0.827</b><span>siren head accuracy (mixed clips)</span></div>
+        <div class="stat"><b>0.70</b><span>trigger rate on real sirens</span></div>
+      </div>
+    </header>
+
+    <section class="journey">
+      <div><b>Problem</b><span>A siren is an event you must hear <i>and</i> see</span></div><span class="arrow">›</span>
+      <div><b>AVLA PoC</b><span>LangGraph DAG · JSON-Schema contract · hysteresis</span></div><span class="arrow">›</span>
+      <div><b>Operator</b><span>2×2 multi-view · MONITOR / CAUTION / ALERT</span></div>
+    </section>
+
+    <section class="columns">
+      <div class="column">
+
+        <article class="card teal ui-shot">
+          <h2><small>00 · In action</small>The 2×2 operator view (real run)</h2>
+          <p>Four live tiles — camera stream, siren head timeline, vision risk and the VLM payload — rendered by the Gradio app from a stitched dashcam clip. The bottom-right tile is the operator recommendation (<b>MONITOR / CAUTION / ALERT_OPERATOR</b>); the app issues no control command.</p>
+          <figure>
+            <img src="avla_figs/ui_C01_3.0.jpg" alt="2x2 operator UI from a real run">
+            <figcaption><b>Fig. 0.</b> Screenshot taken from the running Gradio app on clip C01 (day) — a real 2×2 multi-view render, not a mock-up.</figcaption>
+          </figure>
+        </article>
+
+        <article class="card blue">
+          <h2><small>01 · Problem</small>One event, three modalities</h2>
+          <p>An emergency siren in traffic is <b>audible</b> (direction of arrival), <b>visible</b> (surrounding vehicles, weather) and must become <b>language</b> an operator can act on.</p>
+          <p>Single-modality detectors fail exactly where it matters: a siren can be masked by rain noise, and a visual anomaly can be a false positive on a tunnel wall.</p>
+          <figure>
+            <img src="avla_figs/avla_vision_overlay.jpg" alt="RT-DETR-L detections on a real dashcam frame">
+            <figcaption><b>Fig. 1.</b> S_A stage: RT-DETR-L on a real dashcam frame (C01, day) — 41 detections. Real checkpoint, real frames.</figcaption>
+          </figure>
+        </article>
+
+        <article class="card teal">
+          <h2><small>02 · System</small>LangGraph DAG, six agents</h2>
+          <div class="flow">
+            <div class="node blue-node">S<sub>I</sub><br>state init</div><span class="arrow">›</span>
+            <div class="node teal-node">S<sub>A</sub> ‖ S<sub>T</sub> ‖ S<sub>V</sub><br>parallel</div><span class="arrow">›</span>
+            <div class="node amber-node">S<sub>B</sub><br>hysteresis</div>
+          </div>
+          <p><b>S<sub>A</sub></b> visual anomaly (RT-DETR-L + MAE) · <b>S<sub>T</sub></b> siren head (WavLM) · <b>S<sub>V</sub></b> verification fixture · <b>S<sub>B</sub></b> multimodal fusion with a <b>35-frame hysteresis</b> · <b>S<sub>C</sub></b> VLM payload builder.</p>
+          <h3>Contract-first</h3>
+          <p>Every stage exchanges one <b>FrameAudioPacket</b> validated against a Draft-7 JSON Schema — <b>pre</b> and <b>final</b>. A schema violation is an error, not a warning.</p>
+        </article>
+
+        <article class="card mint">
+          <h2><small>03 · Measured</small>Latency and contract health</h2>
+          <figure>
+            <img src="avla_figs/avla_latency.png" alt="PoC latency versus the 33 ms target">
+            <figcaption><b>Fig. 2.</b> PoC run: All_OK = True, Errors_Count = 0.</figcaption>
+          </figure>
+          <p>Audio–video sync verified on 4 clips (T09, C01, C02, C04): 450 frames each, 16 kHz / 30 fps clock, <b>exact sample match</b>.</p>
+        </article>
+
+      </div>
+
+      <div class="column">
+
+        <article class="card coral">
+          <h2><small>04 · Vision (S_A)</small>RT-DETR-L + MAE anomaly</h2>
+          <p>Risk score = RT-DETR-L detection evidence combined with a MAE embedding distance to a normal clip. The <b>mock baseline is a constant 0.20</b>; the detector must clear 0.75 to trigger.</p>
+          <figure>
+            <img src="avla_figs/avla_vision_risk.png" alt="Vision anomaly score by driving condition">
+            <figcaption><b>Fig. 3.</b> Mean anomaly score by condition (RT-DETR-L, MPS).</figcaption>
+          </figure>
+          <p>Rain (C02) roughly <b>doubles</b> the day score — the detector reacts to a wet tunnel wall. Cost: <b>242–301 ms/frame</b>, so this stage runs off the UI fast path.</p>
+        </article>
+
+        <article class="card violet">
+          <h2><small>05 · Audio (S_B)</small>WavLM head + hysteresis</h2>
+          <p>WavLM-base-plus embeddings → L2-logistic head. Head accuracy <b>0.827</b> on the mixed clip set; the pipeline triggers on <b>0.70</b> of real-siren frames and <b>0.027</b> of ordinary day traffic.</p>
+          <figure>
+            <img src="avla_figs/avla_siren_trigger.png" alt="Siren trigger rate by condition">
+            <figcaption><b>Fig. 4.</b> Measured trigger rate, with and without the 35-frame hysteresis.</figcaption>
+          </figure>
+        </article>
+
+        <article class="card amber">
+          <h2><small>06 · Why a real siren head</small>Synthetic baselines mislead</h2>
+          <p>The first head was trained against a <b>synthesised</b> siren centroid. Measuring against <b>real</b> G44 sirens shows the synthetic baseline does not represent them: cosine to the synthetic centroid is <b>lower for real sirens</b> than for siren-mixed dashcam audio.</p>
+          <figure>
+            <img src="avla_figs/avla_p_siren.png" alt="WavLM cosine for real, mixed and negative clips">
+            <figcaption><b>Fig. 5.</b> WavLM frame cosine to the synthetic centroid.</figcaption>
+          </figure>
+          <p>Fix: train the head on <b>real</b> sirens — final head reaches <b>100%</b> test accuracy with &gt;99.8% confidence on C01, after restoring the best epoch (13 of 30, early stop patience 3).</p>
+        </article>
+
+      </div>
+
+      <div class="column">
+
+        <article class="card blue">
+          <h2><small>07 · Head quality</small>Where the errors are</h2>
+          <figure>
+            <img src="avla_figs/avla_head_confusion.png" alt="Siren head confusion matrix and rates">
+            <figcaption><b>Fig. 6.</b> S_B head: recall 0.781, specificity 0.961, accuracy 0.827 on the mixed set.</figcaption>
+          </figure>
+          <p>Misses dominate (fn 1902 vs fp 116) because the negative clips are long; the <b>hysteresis</b> converts isolated positives into a held event.</p>
+        </article>
+
+        <article class="card coral">
+          <h2><small>08 · Operating point</small>Choosing the threshold</h2>
+          <p>The AST template path exposes a tunable trade-off; the default <b>balanced</b> mode keeps every true positive with no false trigger on the 5 negative clips.</p>
+          <figure>
+            <img src="avla_figs/avla_ast_operating.png" alt="AST threshold operating points">
+            <figcaption><b>Fig. 7.</b> TPR / FPR per threshold mode (12 positive, 5 negative clips).</figcaption>
+          </figure>
+          <p>Temporal rule: 2 s window / 1 s hop, and <b>5 consecutive</b> windows above −0.04. The untouched tunnel clip (T09) crossed the single-frame threshold 6/14 times but never 5 in a row — the streak rule removes exactly that false positive.</p>
+        </article>
+
+        <article class="card violet">
+          <h2><small>08b · VLM payload (S_C)</small>From evidence to language</h2>
+          <p>S<sub>C</sub> turns the fused event into a <b>Qwen2.5-0.5B-Instruct</b> payload run as a separate background task, surfaced as <b>MONITOR / CAUTION / ALERT_OPERATOR</b> only.</p>
+          <p>Inference is rate-limited to <b>once per 5 s</b> and re-armed only when the class or input changes; a Qwen failure is shown in the status panel rather than swallowed. The payload is a recommendation for a human — never a command.</p>
+        </article>
+
+        <article class="card mint">
+          <h2><small>09 · Honest limits</small>What this PoC does not prove</h2>
+          <p>• The AST template clips (<b>G44-01/02/03, C01/C02</b>) are part of the evaluation set — <b>not an independent test</b>.<br>
+             • Trigger rates are <b>provisional operating points</b>, not generalisation performance.<br>
+             • S<sub>A</sub> vision runs <b>242–301 ms/frame</b> (RT-DETR-L) and is <b>off</b> the 33 ms fast path.<br>
+             • S<sub>B</sub> clip-level scores read the <b>whole clip</b> audio — not causal real-time inference.<br>
+             • PoC stages are <b>mock logic</b>; the app <b>drives no vehicle</b> and produces <b>no control output</b>.</p>
+        </article>
+
+        <article class="card blue">
+          <h2><small>09b · Evaluation</small>What was measured, on what</h2>
+          <p><b>Real dashcam:</b> C01 (day), C02 (rain / Seoul tunnel), C04 (night), T09 (untouched tunnel) — 450–451 frames each at 30 fps, 16 kHz stereo audio.</p>
+          <p><b>Real sirens:</b> 6 G44 recordings (air-raid, ambulance, warbling boat, emergency) — 8 600+ frames, used to train and score the head.</p>
+          <p><b>Audio template set:</b> 12 positive / 5 negative clips, 2 s windows with 1 s hop; <b>sync check:</b> 4 clips verified frame-exact.</p>
+        </article>
+
+        <article class="card teal">
+          <h2><small>10 · Next</small>From PoC to deployment</h2>
+          <div class="flow">
+            <div class="node blue-node">real-siren<br>dataset</div><span class="arrow">›</span>
+            <div class="node teal-node">GPU live<br>inference</div><span class="arrow">›</span>
+            <div class="node amber-node">independent<br>test split</div>
+          </div>
+          <p>Replace synthetic siren baselines with a <b>real, held-out</b> siren set, move RT-DETR-L onto the live path, and port the pipeline to <b>3D detection</b> (DETR3D → PETR → Sparse4D) for the visual stage.</p>
+        </article>
+
+      </div>
+    </section>
+
+    <section class="wide">
+      <article class="card amber">
+        <h2><small>11 · Stack</small>What it is built from</h2>
+        <p>Python 3.10 · <b>LangGraph</b> DAG · <b>RT-DETR-L</b> (Ultralytics, MPS) · <b>WavLM-base-plus</b> (audio embeddings) · <b>MAE ViT-Tiny</b> (anomaly embedding) · <b>Qwen2.5-0.5B-Instruct</b> (VLM payload) · <b>Gradio</b> 2×2 multi-view UI · Draft-7 JSON-Schema contracts · pytest suite.</p>
+      </article>
+      <article class="card coral">
+        <h2><small>12 · Safety posture</small>What the UI refuses to do</h2>
+        <p>Recommendations are limited to <b>MONITOR / CAUTION / ALERT_OPERATOR</b>. The app issues <b>no throttle, steering or braking command</b>, and the live monitor reports the MPC mock's steering/brake state as <b>simulation-only</b> values that never reach an actuator.</p>
+      </article>
+      <article class="card mint">
+        <h2><small>12b · Reproducibility</small>Everything is re-runnable</h2>
+        <p>pytest suite over the contracts and agents · <b>golden fixtures</b> for every stage · Colab bundles for GPU inference (Qwen Audio + AST) · JSON-Schema contracts versioned as <code>contracts/frame_audio_packet_v1.0.json</code> · mock state shared by CLI and Gradio.</p>
+      </article>
+      <article class="card teal">
+        <h2><small>13 · Takeaway</small>Contract first, hysteresis second, evidence third</h2>
+        <p>Schema-validated packets make every stage auditable; hysteresis turns noisy frame scores into held events; and measuring against <b>real</b> sirens — not a synthetic stand-in — is what makes the audio head trustworthy.</p>
+        <p><b>Repo:</b> spatial-avla-pipeline · <b>Report:</b> docs/AVLA_PoC_Final_Report.pdf</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <div>
+        <b>AVLA PoC Baseline</b> — Spatial Audio-Visual-Language Alignment Pipeline · AIFFELTHON
+      </div>
+      <div>
+        Numbers are project measurements (outputs/*.json, abl_report_s_*.json, p_siren_report.json, av_sync_report.json).
+        Figures rendered from the project artifacts; no project file was modified.
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

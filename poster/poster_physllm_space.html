@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PhysLLM — Residual Dynamics from Pilot to 117B-scale MoE Routing</title>
+  <title>PhysLLM — From Calibration Gate to 117B-scale MoE Routing</title>
   <link rel="stylesheet" href="poster_space.css">
   <style>
     /* combined PhysLLM poster: hero rail + 4x4 grid (16 cards) */
@@ -16,6 +16,8 @@
     .card figure img { max-height: 33mm; }
     .card figcaption { font-size: 7.2pt; }
     .card table { font-size: 7.6pt; }
+    .card th { font-size: 7.4pt; }
+    .card td { padding: .7mm 1.1mm; }
     .card .tag { font-size: 7.3pt; padding: .6mm 1.9mm; }
     .formula { font-size: 8.6pt; padding: 1.8mm 2.2mm; margin: 1.1mm 0; }
     .flow { gap: 1.1mm; margin: 1.1mm 0 1.3mm; }
@@ -23,8 +25,7 @@
     .chip { font-size: 7.4pt; padding: .8mm 1.9mm; }
     .stat b { font-size: 19pt; }
     .stat span { font-size: 7.8pt; }
-    .card.wide { grid-column: span 2; }
-    .card.wide figure img { max-height: 46mm; }
+    .mono { font-family: "SF Mono", Menlo, monospace; font-size: 7.2pt; color: var(--mint); }
   </style>
 </head>
 <body>
@@ -32,27 +33,27 @@
 
     <!-- ══════════ HERO ══════════ -->
     <header class="hero">
-      <div class="eyebrow">PhysLLM · Generations G0 → N02 → N03</div>
+      <div class="eyebrow">PhysLLM · G0 → N02 → N03</div>
       <h1>PhysLLM:<br>Residual Dynamics<br>at Model Scale</h1>
-      <p class="subtitle">One measurement programme, three generations: a pilot, a frozen evaluation manifest, and MoE routing inside a 117B-parameter model — every number shipped with SHA-256 provenance.</p>
+      <p class="subtitle">One measurement programme, three generations: a calibration gate, a frozen evaluation manifest, and MoE routing inside a 117B-parameter model — every number shipped with SHA-256 provenance.</p>
 
-      <p class="thesis"><b>Claim</b> — the residual stream of a transformer can be measured the same way at every scale, and the protocol (observables → manifest → gates → provenance) is what makes the numbers comparable across generations.</p>
+      <p class="thesis"><b>Claim</b> — a residual stream can be measured the same way at every scale, and the protocol (gate → observables → manifest → gates → provenance) is what makes the numbers comparable across generations.</p>
 
       <div class="stats">
-        <div class="stat"><b>3</b><span>generations: G0 · N02 · N03</span></div>
+        <div class="stat"><b>6</b><span>checkpoints calibrated (G0 gate)</span></div>
         <div class="stat"><b>14.4k</b><span>text x block rows captured</span></div>
         <div class="stat"><b>36</b><span>blocks · full / sliding attention</span></div>
         <div class="stat"><b>128/4</b><span>experts per token (top-4)</span></div>
       </div>
 
       <div class="journey">
-        <div><b>G0</b><span>pilot on a Colab bundle</span></div><span class="arrow">›</span>
+        <div><b>G0</b><span>calibration &amp; lens equivalence</span></div><span class="arrow">›</span>
         <div><b>N02</b><span>frozen observables + manifest</span></div><span class="arrow">›</span>
         <div><b>N03</b><span>MoE routing-conditional</span></div>
       </div>
 
       <p class="footnote">
-        Artifacts: <b>physllm</b> · <b>physllmN02</b> · <b>PhysLLM_N03_Antigravity_Workspace</b><br>
+        Artifacts: <b>physllm_g0</b> (G0 gate v1.0.2) · <b>physllmN02</b> · <b>PhysLLM_N03_Antigravity_Workspace</b><br>
         All numbers are project measurements. Figures rendered from project artifacts; no project file was modified.
       </p>
     </header>
@@ -61,20 +62,57 @@
     <section class="grid">
 
       <article class="card">
-        <h2><small>G0 · week 1</small>Pilot: is the residual stream measurable?</h2>
-        <p>First question: do layer-wise hidden-state norms and updates <b>Δh<sub>l</sub> = h<sub>l+1</sub> − h<sub>l</sub></b> come out finite and correctly shaped?</p>
+        <h2><small>G0 · foundation</small>Calibration before claims</h2>
+        <p><b>G0_Calibration_and_Lens_Equivalence v1.0.2</b>, target <b>REAL-PASS</b>: prove the rig (hooks, dtype, eager/safe mode, tolerances) is <b>lens-equivalent</b> across architectures before any science claim.</p>
+        <table>
+          <thead><tr><th>checkpoint</th><th>dtype · eager</th><th>tol</th></tr></thead>
+          <tbody>
+            <tr><td>gpt2</td><td>fp32 · yes</td><td>1e-3</td></tr>
+            <tr><td>pythia-160m</td><td>fp32 · yes</td><td>1e-3</td></tr>
+            <tr><td>Llama-3.2-1B</td><td>bf16 · no</td><td>1e-2</td></tr>
+            <tr><td>gemma-2-2b</td><td>fp32 · yes</td><td>1e-3</td></tr>
+            <tr><td>Qwen2.5-0.5B</td><td>bf16 · no</td><td>1e-2</td></tr>
+            <tr><td>gpt-oss-20b</td><td>bf16 · safe</td><td>1e-2</td></tr>
+          </tbody>
+        </table>
+        <p>gemma-2 adds softcapping + sliding-window; gpt-oss-20b runs <b>safe_mode</b> (attention off, OOM guard) and <b>drops the first token</b> (attention-sink policy).</p>
+      </article>
+
+      <article class="card">
+        <h2><small>G0 · calibration set</small>C-Set: EN / KO parallel</h2>
+        <p>Four propositions in <b>translation-parallel</b> form (same claim, two languages), fixed as a reference set:</p>
+        <p><span class="tag">C0</span>a small bird crosses a quiet garden<br>
+           <span class="tag">C1</span>the system records several independent sensors<br>
+           <span class="tag">C2</span>physics-guided ML gives interpretable representations<br>
+           <span class="tag coral">C3</span>LLMs process information through hidden residual streams <b>(self-referential edge case)</b></p>
+        <p>Protocol: <b>translation-parallel</b> first; a Korean-specific <b>structural_independent</b> phase is registered but <b>not written yet</b>. Eligible families (llama-3, llama-3.1, gemma-2, qwen-2.5) run the KO set; ineligible models <b>auto-skip with a logged reason</b>.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>G0 · conventions</small>Normalisation is data</h2>
+        <p>Depth, position and density conventions are fixed once and reused by every later generation:</p>
+        <div class="formula">rho = l / max(L, 1) &nbsp;·&nbsp; rho = l / max(L-1, 1)<br>tau = t / max(T - 1, 1)</div>
+        <p>Residual index (0..L) and block-output index (0..L-1) use <b>different</b> normalisers; the first token is excluded for tau.</p>
+        <p>Length-matched strata: bins <b>16 / 32 / 64 / 128 / 256 / 512</b>, minimum 20 texts per bin — below that a bin is reported <b>INCONCLUSIVE</b>.</p>
+        <p class="mono">YAML is data — formulas are never eval'd; a wrong edit is caught immediately.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>G0 · pilot</small>First run</h2>
         <figure>
           <img src="physllm_figs/g0_pilot.png" alt="PhysLLM G0 pilot output">
           <figcaption><b>Fig. 1.</b> G0 pilot output (Colab bundle, Qwen3 finalization v1.0.4).</figcaption>
         </figure>
+        <p>Question that started it: are layer-wise norms and updates <b>Δh<sub>l</sub> = h<sub>l+1</sub> − h<sub>l</sub></b> finite and correctly shaped?</p>
       </article>
 
       <article class="card">
         <h2><small>N02 · week 2</small>Three observables, frozen</h2>
-        <p>Small HF causal LMs (<b>gpt2</b>, <b>pythia-160m</b>, 12 blocks) instrumented block by block, with the observable set <b>frozen for traceability</b>:</p>
+        <p><b>gpt2</b> / <b>pythia-160m</b>, 12 blocks, instrumented block by block. The observable set is <b>frozen for traceability</b>:</p>
         <p><span class="tag">1</span>length-adjusted update norm ‖h<sub>l+1</sub>−h<sub>l</sub>‖<sub>F</sub>/√T<br>
            <span class="tag">2</span>input–update cosine cos(h<sub>l</sub>, Δh<sub>l</sub>)<br>
            <span class="tag">3</span>output/input norm ratio</p>
+        <p>Block outputs are measured <b>before</b> the final LayerNorm (logged separately).</p>
       </article>
 
       <article class="card">
@@ -92,7 +130,7 @@
           <img src="physllm_figs/physllm_branch.png" alt="N02 branch decomposition">
           <figcaption><b>Fig. 3.</b> Final-block branch split; identity residual ≤ 2.3e-5 (GPT-2).</figcaption>
         </figure>
-        <p>Attention dominates GPT-2 (cosine 0.37–0.43) while Pythia is MLP-dominant (0.72–0.76) — the same observable, two architectures.</p>
+        <p>Attention dominates GPT-2 (cosine 0.37–0.43) while Pythia is MLP-dominant (0.72–0.76) — one observable, two architectures.</p>
       </article>
 
       <article class="card">
@@ -109,12 +147,12 @@
            • The earlier synthetic chart was <b>not real model data</b>.<br>
            • N02's scientific hypothesis status stays <b>INCONCLUSIVE</b>; the baseline is frozen for traceability, not for claims.<br>
            • 24 code texts carry no domain word; 12 share one template.<br>
-           • <b>frozen_for_confirmatory_analysis: false</b> — human review still pending.</p>
+           • <b>frozen_for_confirmatory_analysis: false</b> — human review pending.</p>
       </article>
 
       <article class="card">
         <h2><small>N03 · week 3</small>Three branches, one active</h2>
-        <p>N02 deferred three architecture families; N03 registers them as candidates and runs <b>M1 (MoE routing-conditional)</b>. M2 (MLA latent attention) and M3 (SSM / hybrid) stay <b>design-stage only</b> — no claim may use them yet.</p>
+        <p>N02 deferred three architecture families; N03 registers them and runs <b>M1 (MoE routing-conditional)</b>. M2 (MLA latent attention) and M3 (SSM / hybrid) stay <b>design-stage only</b> — no claim may use them yet.</p>
         <figure>
           <img src="physllm_figs/physllm_moe.png" alt="gpt-oss-120b MoE anatomy">
           <figcaption><b>Fig. 5.</b> Target: <b>openai/gpt-oss-120b</b> — MXFP4 weights, bf16 activations.</figcaption>
@@ -123,7 +161,7 @@
 
       <article class="card">
         <h2><small>N03 · observables</small>Routing, not just residuals</h2>
-        <p>Residual stream measures are inherited from N02; N03 adds the branch split and the router:</p>
+        <p>Residual-stream measures are inherited from N02; N03 adds the branch split and the router:</p>
         <p><span class="tag">attn_share</span>attn²/(attn²+moe²) of the pre-residual output<br>
            <span class="tag">routing</span>top-4 expert ids + gate weights (softmax over the <b>top-k logits</b>, not the full 128)<br>
            <span class="tag">entropy</span>routing entropy and H/ln k (k = 4)<br>
@@ -140,48 +178,23 @@
       </article>
 
       <article class="card">
-        <h2><small>N03 · infrastructure</small>80 GB is a hard wall</h2>
-        <p>MXFP4 weights ≈ <b>60.8 GB</b>; 8K context ≈ 65.8 GB, 32K ≈ 68.6 GB.</p>
-        <p>Minimum: <b>one</b> 80 GB GPU (A100 80GB / H100 80GB / MI300X). L4 24GB, T4 16GB, A100 40GB are insufficient. Runtime: Triton ≥ 3.4, compute capability ≥ 7.5.</p>
-        <p>Development uses <b>gpt-oss-20b</b> (~16 GB) only for pipeline wiring.</p>
+        <h2><small>N03 · evidence</small>Gates, provenance, 80 GB wall</h2>
+        <p>MXFP4 weights ≈ <b>60.8 GB</b>; 8K ctx ≈ 65.8 GB, 32K ≈ 68.6 GB — minimum <b>one 80 GB GPU</b> (A100 80GB / H100 80GB / MI300X); L4 24GB, T4 16GB, A100 40GB insufficient. Runtime: Triton ≥ 3.4, compute capability ≥ 7.5. Development uses gpt-oss-20b only for wiring.</p>
+        <p>Every capture passes the dataset gates (<b>G1, M1–M5, P1</b>) and ships manifest SHA-256, code SHA + git revision/dirty, tokenizer ID, activation dtype, seed 0, package versions. Resume is idempotent and refuses a foreign out-dir. <b>30 gate tests</b> pass, incl. an independent routing recomputation.</p>
       </article>
 
       <article class="card">
-        <h2><small>N03 · gates</small>Provenance is enforced, not documented</h2>
-        <p>Every capture must pass the dataset gates (<b>G1, M1–M5, P1</b>) and ships provenance:</p>
-        <p><span class="tag">sha</span>manifest SHA-256 · code SHA + git revision/dirty<br>
-           <span class="tag">meta</span>tokenizer ID · activation dtype · seed 0 · package versions<br>
-           <span class="tag">tests</span>30 gate tests passing (incl. an independent routing recomputation)</p>
-        <p>Resume is idempotent and refuses to append into an out-dir captured from a different manifest.</p>
-      </article>
-
-      <article class="card">
-        <h2><small>N03 · audit</small>T0: three texts out of band</h2>
-        <p>The tokenizer audit recomputes token counts for every candidate text. <b>gpt2</b> and <b>pythia-160m</b> come back clean (0 mismatches).</p>
-        <p><b>gpt-oss leaves 3 long-tier texts out of band</b> (127–128 tokens against a 129 floor) — and they are not random: 11 of 33 long × question_dialogue texts now sit within 2 tokens of the floor, while other long styles clear it by 21+ tokens.</p>
-        <p>Options A / B / B' / C are quantified in the decision memo — <b>choice pending</b>.</p>
-      </article>
-
-      <article class="card">
-        <h2><small>N03 · status</small>Done vs pending</h2>
-        <p><b>Done:</b> scope declaration, M1 capture script, gate tests, notebook simulator, real end-to-end capture on a tiny checkpoint (CPU, both transformers families), per-token routing artifact for 400 texts, T0 audit.</p>
-        <p><b>Pending:</b> T0 option choice · the paid 80 GB session · repository approval.</p>
+        <h2><small>N03 · audit</small>T0 and what is pending</h2>
+        <p>The tokenizer audit recomputes token counts for every candidate: <b>gpt2</b> and <b>pythia-160m</b> clean (0 mismatches), but <b>gpt-oss leaves 3 long-tier texts out of band</b> (127–128 tokens vs a 129 floor) — not random: 11 of 33 long × question_dialogue texts sit within 2 tokens of the floor while other long styles clear it by 21+. Options A / B / B' / C are quantified in the decision memo — <b>choice pending</b>.</p>
+        <p><b>Done:</b> scope, M1 capture script, gate tests, notebook simulator, real end-to-end capture on a tiny checkpoint, routing artifact for 400 texts, T0 audit. <b>Pending:</b> T0 choice · the paid 80 GB session · repo approval.</p>
       </article>
 
       <article class="card">
         <h2><small>Across generations</small>What carries forward</h2>
         <p>One observable definition survives every generation:</p>
         <div class="formula">Δh<sub>l</sub> = h<sub>l+1</sub> − h<sub>l</sub> &nbsp;·&nbsp; ‖Δh<sub>l</sub>‖<sub>F</sub>/√T &nbsp;·&nbsp; cos(h<sub>l</sub>, Δh<sub>l</sub>)</div>
-        <p>G0 asked whether it is measurable, N02 froze <b>what</b> to measure and <b>how</b> to sample, N03 reuses both and adds the router — with the same gates, the same SHA-256 discipline and the same habit of stating the limits next to the number.</p>
-      </article>
-
-      <article class="card">
-        <h2><small>Limits</small>Stated next to the numbers</h2>
-        <p>• Exploratory <b>descriptive</b> statistics — no causal or topic-clustered inference.<br>
-           • No independent validation against the model's real router dispatch or an fp32 reference run.<br>
-           • Candidate manifest <b>not frozen</b> for confirmatory analysis.<br>
-           • N02 pilot is 5 prompts per model; N03 blocks are a capture, not a behavioural claim.<br>
-           • Max relative branch-identity residual 0.0187 (N03) · 2.3e-5 (N02).</p>
+        <p>G0 proved the rig is <b>lens-equivalent</b> across six checkpoints and two languages; N02 froze <b>what</b> to measure and <b>how</b> to sample; N03 reuses both and adds the router — same gates, same SHA-256 discipline, same habit of stating the limits next to the number.</p>
+        <p><b>Limits:</b> exploratory descriptive statistics — no causal or topic-clustered inference · no independent validation against real router dispatch or an fp32 reference run · candidate manifest not frozen · max branch-identity residual 0.0187 (N03), 2.3e-5 (N02).</p>
       </article>
 
     </section>

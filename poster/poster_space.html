@@ -30,6 +30,14 @@
         <div><b>RT-DETR</b><span>Efficient encoder · better queries · tunable depth</span></div>
       </div>
 
+      <div class="protocol">
+        <div class="pnode"><b>1 · cite</b><span>every number is either a <b>cited paper table</b> or labelled as our own measurement — the two are never mixed.</span></div>
+        <div class="pnode"><b>2 · reproduce</b><span>the encoder-variant latency <b>order</b> (D_S5 cheapest) reproduces paper Table 3 exactly on our hardware.</span></div>
+        <div class="pnode"><b>3 · measure</b><span>our NMS cost model is benchmarked <b>end-to-end with the plugin included</b>, matching the paper's conf / IoU trade-off direction.</span></div>
+        <div class="pnode"><b>4 · verify</b><span>the asymmetry the papers teach: matching cost in <b>probabilities</b>, loss in <b>log-likelihoods</b> — L1 penalises a large box 9.44× more, GIoU 1.000×.</span></div>
+        <div class="pnode"><b>5 · scope</b><span>our re-drawings are <b>synthetic and CPU-scale</b>; real-time claims stay with the paper's T4 / TensorRT FP16 benchmark.</span></div>
+      </div>
+
       <p class="footnote">
         Carion et al., ECCV 2020 — arXiv:2005.12872 &nbsp;·&nbsp; Lv et al., CVPR 2024 — arXiv:2304.08069<br>
         Code: github.com/facebookresearch/detr · github.com/lyuwenyu/rt-detr<br>

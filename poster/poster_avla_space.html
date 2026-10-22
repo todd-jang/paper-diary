@@ -51,6 +51,14 @@
         <div><b>Operator</b><span>2×2 view · ALERT_OPERATOR</span></div>
       </div>
 
+      <div class="protocol">
+        <div class="pnode"><b>1 · contract</b><span>every inter-agent edge is schema-validated — the DAG aborts loudly instead of drifting silently; All_OK is the only accepted pass state.</span></div>
+        <div class="pnode"><b>2 · real data</b><span>the synthetic siren baseline was <b>not representative</b> — the head is re-trained on real G44 sirens: 100% test accuracy on C01 (&gt;99.8% confidence), best epoch 13/30, loss 0.6895 → 0.0016.</span></div>
+        <div class="pnode"><b>3 · stabilize</b><span>2 s window / 1 s hop, <b>5 consecutive</b> frames above −0.04 — the streak rule removes exactly the T09 isolated-threshold false positive.</span></div>
+        <div class="pnode"><b>4 · gated output</b><span>S<sub>C</sub> hands the event to Qwen2.5-0.5B at most once per 5 s; a VLM failure surfaces in the status panel — it <b>recommends, never commands</b>.</span></div>
+        <div class="pnode"><b>5 · honest limits</b><span>vision runs 242–301 ms/frame (off the fast path); trigger rates are <b>provisional</b>; PoC stages are mock logic — no vehicle control is produced.</span></div>
+      </div>
+
       <p class="footnote">
         Repo <b>spatial-avla-pipeline</b> · report <b>docs/AVLA_PoC_Final_Report.pdf</b><br>
         All numbers are project measurements (outputs/*.json, abl_report_s_*.json, p_siren_report.json).<br>

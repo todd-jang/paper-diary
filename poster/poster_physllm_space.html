@@ -26,55 +26,6 @@
     .stat b { font-size: 19pt; }
     .stat span { font-size: 7.8pt; }
     .mono { font-family: "SF Mono", Menlo, monospace; font-size: 7.2pt; color: var(--mint); }
-    /* protocol strip: fills the hero rail between journey and footnote */
-    .protocol {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 3mm;
-      position: relative;
-      margin: 2mm 0 0;
-      padding: 2mm 0 2mm 10mm;
-    }
-    .protocol::before {
-      content: "";
-      position: absolute;
-      left: 4.6mm; top: 5mm; bottom: 5mm;
-      width: .6mm;
-      background: linear-gradient(180deg, rgba(79, 209, 197, .65), rgba(79, 209, 197, .10));
-      border-radius: .3mm;
-    }
-    .pnode {
-      position: relative;
-      padding: 3.2mm 4mm;
-      border-radius: 3.4mm;
-      background: var(--glass-strong);
-      border: 1px solid var(--edge-soft);
-    }
-    .pnode::before {
-      content: "";
-      position: absolute;
-      left: -7.2mm; top: 3.4mm;
-      width: 3.2mm; height: 3.2mm;
-      border-radius: 50%;
-      background: var(--mint);
-      box-shadow: 0 0 0 1.6mm rgba(79, 209, 197, .16);
-    }
-    .pnode b {
-      display: block;
-      font-size: 10pt;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-      color: var(--mint);
-    }
-    .pnode span {
-      display: block;
-      margin-top: 1mm;
-      font-size: 8.8pt;
-      line-height: 1.42;
-      color: var(--ink-dim);
-    }
   </style>
 </head>
 <body>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Camera-Only 3D Detection: DETR3D to Sparse4D — Landscape</title>
+  <link rel="stylesheet" href="poster_space.css">
+</head>
+<body>
+  <main class="poster">
+
+    <!-- ══════════════ LEFT RAIL ══════════════ -->
+    <header class="hero">
+      <div class="eyebrow">3D Detection · Multi-view · Camera-only</div>
+      <h1>Camera-Only<br>3D Detection</h1>
+      <p class="subtitle">DETR3D → PETR → Sparse4D: three ways to lift multi-view 2D features into 3D space — explicit projection, precomputed position embedding, anchor-centric sparse propagation.</p>
+
+      <p class="thesis"><b>Central claim</b> — the fork in this lineage is the lift. DETR3D re-projects at every decoder layer, PETR folds 3D coordinates into a position embedding once, Sparse4D moves the lift onto anchors and keeps it alive across frames — O(T) stacking becomes O(1) recurrence.</p>
+
+      <div class="stats">
+        <div class="stat"><b>47.9</b><span>DETR3D test NDS · V2-99</span></div>
+        <div class="stat"><b>50.4</b><span>PETR test NDS · V2-99*</span></div>
+        <div class="stat"><b>58.2</b><span>PETRv2 test NDS · V2-99</span></div>
+        <div class="stat"><b>63.8</b><span>Sparse4D v2 test NDS</span></div>
+      </div>
+
+      <div class="journey">
+        <div><b>Problem</b><span>Where does "3D" come from in camera-only?</span></div><span class="arrow">›</span>
+        <div><b>Lift</b><span>Projection matrices · 3D position embedding · 4D keypoints</span></div><span class="arrow">›</span>
+        <div><b>Time</b><span>Single frame → 2 frames → stacked T → recurrent O(1)</span></div>
+      </div>
+
+      <div class="protocol">
+        <div class="pnode"><b>1 · cite</b><span>every number is a <b>paper table, abstract, or official README</b> cell — no third-party reposts, no own measurements on this topic.</span></div>
+        <div class="pnode"><b>2 · pin</b><span>every recalled arXiv ID was re-checked on the abs page — <b>4 of 5 prior IDs were wrong</b> (e.g. PETR is 2203.05625, not 2203.12291).</span></div>
+        <div class="pnode"><b>3 · split</b><span><b>val vs test flagged on every row</b>, with backbone and resolution. PETR's headline 50.4/44.1 is test · V2-99 · external data (Table 2).</span></div>
+        <div class="pnode"><b>4 · cross-check</b><span>DETR3D test = <b>41.2 / 47.9</b> confirmed in its Table 2, README, and the comparison tables of PETR, PETRv2, and Sparse4D — four independent tables agree.</span></div>
+        <div class="pnode"><b>5 · scope</b><span>survey only. Unverified recollections excluded: <b>"46.2/53.5"</b>, "GPU-center", <b>"15.9 FPS"</b>, Sparse4D "no NMS", "depth sort" — none appear in the sources.</span></div>
+      </div>
+
+      <p class="footnote">
+        Wang et al., CoRL 2021 — arXiv:2110.06922 &nbsp;·&nbsp; Liu et al., ECCV 2022 — arXiv:2203.05625<br>
+        Liu et al., ICCV 2023 — arXiv:2206.01256 &nbsp;·&nbsp; Lin et al. (Horizon) — arXiv:2211.10581 · 2305.14018<br>
+        Code: github.com/WangYueFt/detr3d · megvii-research/PETR · HorizonRobotics/Sparse4D
+      </p>
+    </header>
+
+    <!-- ══════════════ RIGHT GRID ══════════════ -->
+    <section class="grid">
+
+      <article class="card">
+        <h2><small>01 · Formulation</small>DETR3D: queries that go looking for pixels</h2>
+        <p>A <b>sparse set of 3D object queries</b> is projected into each camera view via the transform matrix (Eq. 2), then features are bilinearly sampled; predictions use a <b>set-to-set loss</b>.</p>
+        <div class="flow">
+          <div class="node">3D object<br>queries</div><span class="arrow">›</span>
+          <div class="node">Project per<br>camera</div><span class="arrow">›</span>
+          <div class="node">Sample 2D<br>features</div>
+        </div>
+        <p>The re-projection happens <b>at every decoder layer</b> — lifting is paid repeatedly. Depth is never predicted, so the paper itself flags it: "depth estimation is still a core challenging" (§4.5).</p>
+        <div class="formula">NMS-free: "We do not use any post-processing such as NMS" (§4.1)</div>
+      </article>
+
+      <article class="card">
+        <h2><small>02 · DETR3D results</small>Cited numbers, conditions attached</h2>
+        <table>
+          <thead><tr><th>Config (paper)</th><th>Split</th><th>mAP</th><th>NDS</th></tr></thead>
+          <tbody>
+            <tr><td>R101+DCN, FCOS3D init †</td><td>val</td><td>34.6</td><td>42.5</td></tr>
+            <tr><td>R101+DCN, +CBGS #</td><td>val</td><td>34.9</td><td>43.4</td></tr>
+            <tr><td>V2-99, DD3D init #</td><td class="hi">test</td><td class="hi">41.2</td><td class="hi">47.9</td></tr>
+          </tbody>
+        </table>
+        <p><b>FPS: not reported</b> — only training cost (12 epochs, 8× RTX 3090, ~18 h). The famous "46.2 mAP / 53.5 NDS" pairing does not exist in any source we could check — <strong>treated as invalid</strong> and excluded.</p>
+        <div class="chips">
+          <span class="chip">repo: megvii/… deleted → WangYueFt/detr3d</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2><small>03 · PETR</small>Kill the re-projection: 3D position embedding</h2>
+        <p>Sample 64 points along the depth axis (<b>LID</b>, §4.2 — this depth mechanism belongs to PETR, <strong>not</strong> DETR3D). An MLP turns 3D coordinates into a <b>3D PE</b>, added to image features: "3D position-aware features".</p>
+        <p>The decoder is then a <b>standard DETR global-attention</b> pass over the flattened map — one shot, no per-layer projection. The lift cost moved from the decoder loop to a preprocessing step.</p>
+        <table>
+          <thead><tr><th>Config</th><th>Split</th><th>mAP</th><th>NDS</th></tr></thead>
+          <tbody>
+            <tr><td>R101, 1408×512</td><td>val</td><td>35.7</td><td>42.1</td></tr>
+            <tr><td>R101</td><td>test</td><td>39.1</td><td>45.5</td></tr>
+            <tr><td>V2-99 * (external data)</td><td class="hi">test</td><td class="hi">44.1</td><td class="hi">50.4</td></tr>
+          </tbody>
+        </table>
+        <p class="formula">10.7 FPS @ 1056×384 on V100 — vs BEVDet 4.2 FPS, but on a stronger 3090 (§4.4 flags the mismatch)</p>
+      </article>
+
+      <article class="card">
+        <h2><small>04 · PETRv2</small>The embedding learns to align time</h2>
+        <p>The same 3D PE is extended for <b>temporal alignment of object positions</b> across frames, plus a feature-guided position encoder and <b>task-specific queries</b> (multi-task: BEV segmentation, 3D lane).</p>
+        <p><span class="tag">val R101</span>1600×640: 42.1 / 52.4 &nbsp; <span class="tag sky">test V2-99</span>49.0 / 58.2 &nbsp; <span class="tag violet">ms</span>50.8 / 59.1</p>
+        <p>2 frames is all it needs — yet it already beats Sparse4D's 9-frame val numbers on the test split. Venue verified in <strong>CVF: ICCV 2023</strong>, DOI 10.1109/iccv51070.2023.00302.</p>
+        <div class="formula">alignment moved from warping pixels to warping queries</div>
+      </article>
+
+      <article class="card">
+        <h2><small>05 · Sparse4D</small>Anchors that look: 4D keypoints + depth reweight</h2>
+        <p>Each 3D anchor carries <b>multiple 4D keypoints</b> (7 fixed + 6 learnable) projected to every view / scale / timestamp; features are fused hierarchically across views, scales, times, keypoints.</p>
+        <p><span class="tag">depth</span>an <b>instance-level depth reweight module</b> eases the ill-posed 3D→2D projection (abstract). <span class="tag coral">init</span><b>K-Means</b> on the training set: 900 anchors, 6 cascades, 640×1600.</p>
+        <table>
+          <thead><tr><th>Config</th><th>Split</th><th>mAP</th><th>NDS</th></tr></thead>
+          <tbody>
+            <tr><td>R101, T=1</td><td>val</td><td>38.2</td><td>45.1</td></tr>
+            <tr><td>R101, T=9(−6)</td><td>val</td><td>44.5</td><td>54.7</td></tr>
+            <tr><td>Vov-99</td><td class="hi">test</td><td class="hi">51.1</td><td class="hi">59.5</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2><small>06 · Sparse4D v2</small>Stack → recurrence: O(T) to O(1)</h2>
+        <p>In v1, temporal fusion <b>stacks T frames</b> — FPS falls 21.5 → 6.1 as T: 1→9 (v2 paper Table 1, R50·704×256·3090). v2 instead <b>propagates instances</b>: previous-frame outputs become current-frame anchors via ego motion, re-encoded each frame.</p>
+        <div class="flow">
+          <div class="node">t−1<br>instances</div><span class="arrow">›</span>
+          <div class="node">Ego-motion<br>re-projection</div><span class="arrow">›</span>
+          <div class="node">Anchor<br>re-encode</div>
+        </div>
+        <p><span class="tag">EDA</span>FPS 13.7 → <b>20.3</b> · inference memory <b>−53%</b> · training memory 6328 → 3100 MB (Table 2, 3090·batch 1)</p>
+        <p>The venue for v1/v2 is <strong>unverified</strong> — cite as arXiv preprint (Horizon Robotics); the integrated line appears in TPAMI 2026 per the official README.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>07 · Evolution table</small>Same figure of merit, conditions attached</h2>
+        <table>
+          <thead><tr><th>Model</th><th>test mAP</th><th>test NDS</th><th>Key motion</th></tr></thead>
+          <tbody>
+            <tr><td>DETR3D # (V2-99)</td><td>41.2</td><td>47.9</td><td>re-project each layer</td></tr>
+            <tr><td>PETR * (V2-99)</td><td>44.1</td><td>50.4</td><td>PE once, one-shot decode</td></tr>
+            <tr><td>PETRv2 (V2-99)</td><td>49.0</td><td>58.2</td><td>PE aligns time · 2 frames</td></tr>
+            <tr><td>Sparse4D (Vov-99)</td><td>51.1</td><td>59.5</td><td>anchor keypoints · stack T</td></tr>
+            <tr><td>Sparse4D v2 (Vov-99)</td><td class="hi">55.7</td><td class="hi">63.8</td><td class="hi">propagate · O(1)</td></tr>
+          </tbody>
+        </table>
+        <p>All five are <b>external-data / large-backbone</b> configurations — the trend is real, direct cross-model speed claims are not.</p>
+        <div class="formula">test NDS: 47.9 → 50.4 → 58.2 → 59.5 → 63.8</div>
+      </article>
+
+      <article class="card">
+        <h2><small>08 · Speed discipline</small>FPS only travels with its GPU</h2>
+        <p>Every FPS cell in this poster carries its conditions — none are directly comparable across papers:</p>
+        <table>
+          <thead><tr><th>Cell</th><th>Conditions</th></tr></thead>
+          <tbody>
+            <tr><td>PETR 10.7 FPS</td><td>V100 · 1056×384 (BEVDet 4.2 on 3090)</td></tr>
+            <tr><td>v1 21.5 → 6.1 (T=1→9)</td><td>3090 · 704×256 · R50 (Table 1)</td></tr>
+            <tr><td>v2 20.3 (any T)</td><td>3090 · 704×256 · R50 — same rig as v1</td></tr>
+            <tr><td>v1 2.9 / v2 8.4 (val)</td><td>README rig: 8× RTX 3090, own res/backbones</td></tr>
+          </tbody>
+        </table>
+        <p>DETR3D and PETRv2 report <b>no FPS at all</b>. The only same-rig comparison is v1 vs v2: the O(1) design is what buys the speed, nothing else.</p>
+      </article>
+
+      <article class="card">
+        <h2><small>09 · Open limits</small>What this poster does not claim</h2>
+        <ul class="limits">
+          <li><b>Validated excludes</b> — "46.2/53.5" (DETR3D), "GPU-center", "15.9 FPS", Sparse4D "no NMS" wording, "depth sort": none exist in the sources; kept out on purpose.</li>
+          <li><b>test rows use external data / V2-99</b> — trend comparison, not a controlled ablation chain.</li>
+          <li><b>val rows differ in backbone and resolution</b> — cited as published, not normalized by us.</li>
+          <li><b>Sparse4D v1/v2 venue unverified</b> — official indexes show preprint only; we say so instead of guessing.</li>
+          <li><b>LiDAR-free only</b> — BEVFormer and stream successors (StreamPETR, SparseBEV) are out of scope, listed as next.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip">Next: BEVFormer</span>
+          <span class="chip">StreamPETR</span>
+          <span class="chip">SparseBEV</span>
+          <span class="chip">day09_3d_fsd/01_초안.md</span>
+        </div>
+      </article>
+
+    </section>
+  </main>
+</body>
+</html>

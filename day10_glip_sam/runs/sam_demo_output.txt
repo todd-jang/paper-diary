@@ -1,0 +1,39 @@
+==========================================================================
+Day 10 · SAM 데모 — 프롬프트형 마스크 분할 기제 합성(CPU) 방향 재현
+실행: 2026-10-22T19:29:34  seed=42  24×24 격자  GT: whole/part/subpart 반지름 (8.0, 5.0, 2.5)
+성격: 논문 기제의 '방향' 재현(합성 세계) — 논문 수치의 재현 아님.
+==========================================================================
+  check: V1 단일 점 프롬프트 → 정확히 3마스크, 3계층 중첩(area 단조·포함)
+  n_outputs: 3
+  areas_candidates: [np.int64(221), np.int64(69), np.int64(21)]
+  areas_gt: [np.int64(197), np.int64(81), np.int64(21)]
+  candidates_area_monotone: True
+  candidates_nested_containment: True
+  gt_area_monotone: True
+  point_inside_all: True
+  PASS: True
+  paper: SAM §3 — 'three masks correspond to whole / part / subpart' (단일 프롬프트가 모호성을 3레벨로 풀어냈다)
+--------------------------------------------------------------------------
+  check: V2 focal:dice=20:1 — 최소손실 GT == 최대IoU GT (모호성 해소 기제)
+  iou_matrix: [[0.8914, 0.3665, 0.095], [0.3503, 0.8519, 0.3043], [0.1066, 0.2593, 1.0]]
+  argmin_loss_gt: [0, 1, 2]
+  argmax_iou_gt: [0, 1, 2]
+  correspondence_matches: 3/3
+  PASS: True
+  paper: SAM §3 — 마스크 디코더 손실 'focal loss and dice loss in a 20:1 ratio' (구현 focal γ=2, α=0.25는 시연 고정)
+--------------------------------------------------------------------------
+  check: V3 다중 프롬프트 → 1출력(예외) + 박스 정밀화가 원하는 GT IoU 개선
+  n_outputs_single_prompt: 3
+  n_outputs_point_plus_box: 1
+  box_head_matches_box_extent: True
+  iou_point_only_best_part: 0.8519
+  iou_after_box: 1.0
+  PASS: True
+  paper: SAM App. §A — 'single prompt → up to three outputs; multiple → one' + 프롬프트 정밀화로 모호성 해소
+--------------------------------------------------------------------------
+  check: V4 손실 구성 스윕 — focal:dice=20:1에서 대응 3/3 (판정), 타 가중치 관측
+  argmin_loss_eq_argmax_iou_per_weighting: {'focal20:dice1': 3, 'focal1:dice1': 3, 'focal1:dice0': 0, 'focal0:dice1': 3}
+  PASS: True
+  paper: SAM §3 — 20:1 비율이 논문 명시값; 타 가중치는 관측(나이프-엣지 아님 검사)
+--------------------------------------------------------------------------
+최종: PASS (4/4)

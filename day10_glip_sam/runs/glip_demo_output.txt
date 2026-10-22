@@ -1,0 +1,37 @@
+==========================================================================
+Day 10 · GLIP 데모 v2 — 로짓 스왑의 합성(CPU) 방향 재현 (보장-방향 설계)
+실행: 2026-10-22T19:24:49  seed=42  D=64  N_region=64  C=8  K(토큰/클래스)=4  σ=0.0744 동일분산
+성격: 논문 명제의 '방향' 재현(합성 세계) — 논문 수치의 재현 아님.
+==========================================================================
+  check: V1 토큰 평균의 잔여 노이즈 ≈ 단일 토큰의 1/K (분산 감소 보장)
+  resid_single: 0.3651
+  resid_mean: 0.0905
+  ratio: 0.2479
+  expected_ratio: 0.25
+  retrieval_acc_token_mean: 0.75
+  retrieval_acc_single_token: 0.6875
+  PASS: True
+  paper: GLIP §3.1 — 'we average token probabilities as the phrase probability' · K=4, σ=0.0744 동일 분산 (λ 격차 없음)
+--------------------------------------------------------------------------
+  check: V2 W→P 스왑: σ=0 동등성(항등식) + agreement(σ) 비증가(구조)
+  sigma: [0.0, 0.2, 0.5, 1.0]
+  agreement: [1.0, 0.6719, 0.3438, 0.2344]
+  identity_at_sigma_zero: True
+  monotone_nonincreasing: True
+  PASS: True
+  paper: GLIP App. §B — reformulate 전/후 COCO val2017 둘 다 49.4 AP (σ>0 구간의 agreement는 측정값 — 판정은 정리+구조)
+--------------------------------------------------------------------------
+  check: V3 O^{t2i} 여입: 조준 어텐션(β=1) 마진 개선 · 균등 어텐션(β=0)=대조군
+  sweep: [{'beta_aim': 0.0, 'tau': 0.35, 'mrr_late': 0.9237, 'mrr_early': 0.8994, 'delta_mrr': -0.0244, 'frac_early_ge_late': 0.13}, {'beta_aim': 0.0, 'tau': 0.6, 'mrr_late': 0.735, 'mrr_early': 0.7236, 'delta_mrr': -0.0114, 'frac_early_ge_late': 0.275}, {'beta_aim': 0.0, 'tau': 0.85, 'mrr_late': 0.6144, 'mrr_early': 0.6109, 'delta_mrr': -0.0035, 'frac_early_ge_late': 0.4}, {'beta_aim': 0.5, 'tau': 0.35, 'mrr_late': 0.9229, 'mrr_early': 0.9558, 'delta_mrr': 0.0329, 'frac_early_ge_late': 0.97}, {'beta_aim': 0.5, 'tau': 0.6, 'mrr_late': 0.7293, 'mrr_early': 0.7938, 'delta_mrr': 0.0646, 'frac_early_ge_late': 1.0}, {'beta_aim': 0.5, 'tau': 0.85, 'mrr_late': 0.6193, 'mrr_early': 0.6751, 'delta_mrr': 0.0558, 'frac_early_ge_late': 1.0}, {'beta_aim': 1.0, 'tau': 0.35, 'mrr_late': 0.9226, 'mrr_early': 0.9808, 'delta_mrr': 0.0582, 'frac_early_ge_late': 1.0}, {'beta_aim': 1.0, 'tau': 0.6, 'mrr_late': 0.7299, 'mrr_early': 0.859, 'delta_mrr': 0.1291, 'frac_early_ge_late': 1.0}, {'beta_aim': 1.0, 'tau': 0.85, 'mrr_late': 0.6113, 'mrr_early': 0.7268, 'delta_mrr': 0.1155, 'frac_early_ge_late': 1.0}]
+  untrained_softmax_observation: [{'tau': 0.35, 'delta_mrr_untrained_softmax': -0.0305}, {'tau': 0.6, 'delta_mrr_untrained_softmax': -0.0425}, {'tau': 0.85, 'delta_mrr_untrained_softmax': -0.0322}]
+  delta_top_vs_ctrl: [0.1155, -0.0035]
+  PASS: True
+  paper: GLIP §3.2 Eqs. 4–6 + Table 8 — O365 딥퓨전 ✗→✓: COCO 42.9→44.9 (방향 재현)
+--------------------------------------------------------------------------
+  check: V4 청크 프롬프트(10클래스×4)가 전체 프롬프트와 동일 지정
+  coverage_each_category_once: 1.0
+  agreement_with_single_prompt: 1.0
+  PASS: True
+  paper: GLIP App. §C.2 — LVIS zero-shot '40 categories into one prompt' 청킹 구조 · 256 토큰 한도(App. §C.1)
+--------------------------------------------------------------------------
+최종: PASS (4/4)

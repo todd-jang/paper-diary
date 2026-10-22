@@ -3,6 +3,7 @@
 > **성격:** 3D 객체 탐지(DETR 3D)를 **별도 트랙**으로 잡기 위한 지도(landscape). Day 07(2D DETR)과는 별개이며, 커리큘럼 어디에 끼울지는 아래 §6에서 제안한다.
 > **ID 검증 원칙:** 아래 arXiv ID는 **직접 조회해 제목을 확인한 것만** 적었다. 확인하지 못한 고전 논문(SECOND · LSSD · CM3D 등)은 **ID를 비워 두고 제목+연도만** 적었다(추측 ID는 쓰지 않는다).
 > **확인 일자:** 2026-10-20 (arXiv API·abs 페이지 조회 기준)
+> **진행 10/22:** 계보 선두 3편(DETR3D·PETR·PETRv2·Sparse4D v1/v2)의 조사 초안을 작성했다 → `day09_3d_fsd/01_초안.md` + 합본 포스터 `poster/poster_3d_space.html`. §3 표의 ID·수치는 라이브러리니안 팩트시트(abs·본문 표·공식 README 교차검증)로 재확인 — 오기 가능성 있던 ID 4건 교정, 미검증 수치 5종(DETR3D "46.2/53.5"·"GPU-center"·Sparse4D "15.9 FPS"·"no NMS" 명시·"depth sort")은 배제 확정. StreamPETR(2303.11926) 이후 계보는 차기 세션 분량.
 
 ---
 

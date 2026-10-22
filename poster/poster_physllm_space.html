@@ -26,6 +26,55 @@
     .stat b { font-size: 19pt; }
     .stat span { font-size: 7.8pt; }
     .mono { font-family: "SF Mono", Menlo, monospace; font-size: 7.2pt; color: var(--mint); }
+    /* protocol strip: fills the hero rail between journey and footnote */
+    .protocol {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 3mm;
+      position: relative;
+      margin: 2mm 0 0;
+      padding: 2mm 0 2mm 10mm;
+    }
+    .protocol::before {
+      content: "";
+      position: absolute;
+      left: 4.6mm; top: 5mm; bottom: 5mm;
+      width: .6mm;
+      background: linear-gradient(180deg, rgba(79, 209, 197, .65), rgba(79, 209, 197, .10));
+      border-radius: .3mm;
+    }
+    .pnode {
+      position: relative;
+      padding: 3.2mm 4mm;
+      border-radius: 3.4mm;
+      background: var(--glass-strong);
+      border: 1px solid var(--edge-soft);
+    }
+    .pnode::before {
+      content: "";
+      position: absolute;
+      left: -7.2mm; top: 3.4mm;
+      width: 3.2mm; height: 3.2mm;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 0 1.6mm rgba(79, 209, 197, .16);
+    }
+    .pnode b {
+      display: block;
+      font-size: 10pt;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--mint);
+    }
+    .pnode span {
+      display: block;
+      margin-top: 1mm;
+      font-size: 8.8pt;
+      line-height: 1.42;
+      color: var(--ink-dim);
+    }
   </style>
 </head>
 <body>
@@ -50,6 +99,14 @@
         <div><b>G0</b><span>calibration &amp; lens equivalence</span></div><span class="arrow">›</span>
         <div><b>N02</b><span>frozen observables + manifest</span></div><span class="arrow">›</span>
         <div><b>N03</b><span>MoE routing-conditional</span></div>
+      </div>
+
+      <div class="protocol">
+        <div class="pnode"><b>G0 · calibrate</b><span>6 checkpoints calibrated — same rig proven lens-equivalent, tolerance 1e-3 (fp32 · eager) to 1e-2 (bf16 · safe mode) before any claim.</span></div>
+        <div class="pnode"><b>N02 · freeze</b><span>observables + length strata frozen for traceability; candidate manifest v1.0.3 passes preflight with 0 hard-check failures.</span></div>
+        <div class="pnode"><b>N03 · capture</b><span>14.4k text × block rows; dataset gates G1 · M1–M5 · P1 (30 gate tests) enforce the run before a single token is captured.</span></div>
+        <div class="pnode"><b>audit · verify</b><span>routing recomputed independently; T0 tokenizer audit quantified with options A / B / B' / C; thin evidence stays INCONCLUSIVE.</span></div>
+        <div class="pnode"><b>ship · prove</b><span>every artifact ships SHA-256 manifest + code + git revision, seed 0, tokenizer id, activation dtype — numbers come with receipts.</span></div>
       </div>
 
       <p class="footnote">

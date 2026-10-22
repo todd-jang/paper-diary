@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Camera-Only 3D Detection: DETR3D to Sparse4D — Landscape</title>
   <link rel="stylesheet" href="poster_space.css">
+  <style>
+    /* day-9 poster only: this sheet has no inline figures, so the grid's natural
+       content height is short and the poster's 1fr row stays empty. Span both
+       poster rows so grid-auto-rows:1fr fills the full sheet. */
+    .grid { grid-row: 1 / span 2; }
+    /* last block of each card anchors to the floor — same role figures play on
+       the other posters (figures already get margin-top:auto in the shared CSS) */
+    .card > :last-child { margin-top: auto; }
+  </style>
 </head>
 <body>
   <main class="poster">

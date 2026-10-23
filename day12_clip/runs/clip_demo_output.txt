@@ -1,0 +1,45 @@
+==========================================================================
+Day 12 · CLIP 데모 — 대조 학습이 classifier를 말에서 배우는 구조 (합성, CPU)
+실행: 2026-10-23T09:53:14  seed=42  D=64  N_batch=32  C=8  K(프롬프트/클래스)=8  σ=0.1052 동일분산
+성격: 논문 명제의 '방향·구조' 재현(합성 세계) — 논문 수치 재현 아님.
+==========================================================================
+  check: V1 대칭 CE — 분해 항등식 + 정렬<랜덤(방향) + 대각 행 최대 전제의 τ 비증가
+  taus: [0.5, 1.0, 2.0, 4.0, 7.0]
+  aligned_loss: [1.994971, 1.20369, 0.037012, 0.0, 0.0]
+  random_loss: [3.481177, 3.518944, 3.92432, 15.560932, 307.334816]
+  identity_exact: True
+  diagonal_is_row_max: True
+  aligned_leq_random_all_taus: True
+  aligned_loss_nonincreasing_in_tau: True
+  PASS: True
+  paper: CLIP §2.2 + figure pseudocode — loss=(CE(axis=0)+CE(axis=1))/2, labels=arange(n)
+--------------------------------------------------------------------------
+  check: V2 logit 스케일 ×100 클립 — 클립 항등식 + 랭킹 불변 + 신뢰도 비감소
+  tau_log_params: [5.5, 4.6052]
+  clip_identity_exact: True
+  ranking_invariant_to_common_scale: True
+  maxprob_by_scale: [0.048856, 0.075337, 0.544253, 0.999996, 1.0]
+  maxprob_monotone_nondecreasing: True
+  PASS: True
+  paper: CLIP §4 — temperature 'log-parameterized', logit 스케일 'clipped ... by more than 100' + 부록 하이퍼파라 표 Maximum temperature 100.0
+--------------------------------------------------------------------------
+  check: V3 임베딩 앙상블 상각 — σ=0 항등식 + 인코딩 비용 1:K + agreement 비증가
+  identity_at_sigma_zero: True
+  encoding_cost_structure: {'prob_ensemble_encodes_per_inference': 8, 'embedding_ensemble_encodes_per_inference': 1}
+  sigmas: [0.0, 0.2, 0.5, 1.0]
+  agreement_with_base: [1.0, 0.7812, 0.5, 0.2812]
+  agreement_nondecreasing_trend_note: agreement는 σ에 비증가 (공통난수 구조)
+  PASS: True
+  paper: CLIP §3.1.1 — 'cache a single set of averaged text embeddings so that the compute cost of the ensemble is the same as using a single classifier when amortized'
+--------------------------------------------------------------------------
+  check: V4 K개 프롬프트 평균의 잔여 노이즈 ≈ 단일 프롬프트의 1/K (분산 감소 보장)
+  resid_single: 0.7098
+  resid_mean: 0.085
+  ratio: 0.1198
+  expected_ratio_1_over_K: 0.125
+  retrieval_acc_mean_prompt: 0.7656
+  retrieval_acc_single_prompt: 0.7031
+  PASS: True
+  paper: CLIP §3.1.1 — '80 different context prompts and ensembled', ImageNet +3.5%(단일 기본 템플릿 대비) · CPU 데모는 K=8 샘플
+--------------------------------------------------------------------------
+최종: PASS (4/4)

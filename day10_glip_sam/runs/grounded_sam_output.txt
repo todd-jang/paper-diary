@@ -1,0 +1,48 @@
+==========================================================================
+Day 10 · Grounded-SAM 데모 — 텍스트→박스→마스크 인터페이스 합성(CPU) 방향 재현
+실행: 2026-10-26T11:06:32  seed=42  24×24 격자  개체 2종(부류 0/1)  τ·τ_s 는 구성 고정([라벨-s])
+성격: 커뮤니티 레포(Grounded-SAM) 기제의 '방향' 재현 — 원문 통합·수치 재현 아님.
+==========================================================================
+  check: V1 텍스트→박스 — 토큰 평균 유사도가 오지 않는 3후보 중 진리 top-1
+  region_order: true(c0) · true(c1) · spurious
+  top1_per_query: [0, 1]
+  boxes_xyxy: [(4, 4, 8, 8), (16, 16, 20, 20)]
+  PASS: True
+  paper: GLIP §3.1 — 'average token probabilities as the phrase probability' · S_ground = O Pᵀ 문구-리전 매칭 [합성 세계 — 논문 수치 비교 불가]
+--------------------------------------------------------------------------
+  check: V2 라벨 배정 + 점수 필터 — 진리 유지·의사 배제
+  assigned_labels: [0, 1, 0]
+  label_assignment: PASS (진리 0/1 각자 부류 배정)
+  score_truth0: 0.7757
+  score_spurious: 0.1217
+  tau: 0.4487
+  tau_nature: [라벨-s] 진리 점수·의사 점수 중점 (튜닝 아님 — 구성 고정)
+  kept: (1, 0)
+  box_precision: 1.0
+  separation_margin: 0.654
+  noise_bound: 0.0186
+  PASS: True
+  paper: Day10_GLIP_SAM.md Q3 — 'similarity 점수 필터 → SAM box prompt' 단계 구조 [합성 세계 — 논문 수치와 비교 불가]
+--------------------------------------------------------------------------
+  check: V3 박스(extent) 프롬프트 → 1출력(예외) vs 점 프롬프트 → 3출력 + IoU 개선
+  n_outputs_point_prompt: 3
+  n_outputs_box_prompt: 1
+  extent_radius: 5.0
+  selected_head_radius: 8.3
+  iou_point_only_best_part: 0.8519
+  iou_after_box: 1.0
+  improved: True
+  PASS: True
+  paper: SAM App. §A — 'single prompt → up to three outputs; multiple → one' + 프롬프트가 개체 extent로 구속되면 원하는 GT IoU 개선 (기제 방향 — 10/23 IoU 0.85→1.0 관측의 구조 재현 [관측])
+--------------------------------------------------------------------------
+  check: V4 E2E — 쿼리 2개 → 마스크 2개, IoU ≥ τ_s
+  top1_per_query: [0, 1]
+  detector_extent_per_class: [(0, 8.0), (1, 8.0)]
+  mask_counts: [1, 1]
+  ious_per_query: [1.0, 1.0]
+  tau_s: 0.7
+  tau_s_nature: [라벨-s] extent clamp가 원-원 직접 일치 상향 — 판정선 0.7 (논문 수치 아님 — 구성 고정 [관측])
+  PASS: True
+  paper: Day10_GLIP_SAM.md Q3 인터페이스 전 단계 통합 — 커뮤니티 레포 기제 합성(Grounded-SAM) · Grounding DINO(2303.05499) 기반 — 원문 통합 아님 명시
+--------------------------------------------------------------------------
+최종: PASS (4/4)

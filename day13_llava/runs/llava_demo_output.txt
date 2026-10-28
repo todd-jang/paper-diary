@@ -1,0 +1,56 @@
+==========================================================================
+Day 13 · LLaVA 데모 — 시각 토크나이저가 언어 LLM 벤치에 앉는 구조 (합성, CPU)
+실행: 2026-10-28T16:36:06  seed=42  C=128  D=64  D_CLIP=64  |  N_ex=96  L_seq=15  |  V4 세계: ScienceQA test 4241 규모 가정
+성격: 논문 명제의 '방향·구조' 재현(합성 세계) — 논문 수치 재현 아님.
+==========================================================================
+  check: V1 식(1) Stage 1 정합 — σ=0 완전 정합 항등식 + 잔차 직교성 + 모듈 동결(θ={W})
+  fit_operators: {'encoder': 'frozen (CLIP)', 'projection W': 'trainable', 'llm_vocab': 'frozen'}
+  noiseless_full_reconstruction_max_abs: 0.0
+  residual_orthogonality_scaled_max: 0.0
+  modules_bit_identical_after_fit: True
+  heldout_mean_cos(fit/probe): [0.668, 0.0476]
+  PASS: True
+  paper: 2304.08485 §4.1 Eq.(1) H_v = W·Z_v · §4.2 Stage 1 'training a compatible visual tokenizer for the frozen LLM' (CC-595K · θ={W}만 · lr 2e-3 · ≤4h)
+--------------------------------------------------------------------------
+  check: V2 Table 4 데이터 혼입 — 적산 항등식(2경로) + All 순서 방향 + 공동 확장 + No-tuning 최저
+  scores(conv/detail/complex): {'Full (58/23/77)': [np.float64(25.972), np.float64(25.6777), np.float64(26.0345)], 'Detail+Complex': [np.float64(25.1167), np.float64(25.6093), np.float64(25.966)], 'Conv+5%D+10%C': [np.float64(25.8765), np.float64(25.1241), np.float64(25.2978)], 'Conv only': [np.float64(25.8553), np.float64(25.0684), np.float64(25.0684)], 'No tuning': [np.float64(25.0), np.float64(25.0), np.float64(25.0)]}
+  all_col_relative_mean: {'Full (58/23/77)': 25.8947, 'Detail+Complex': 25.564, 'Conv+5%D+10%C': 25.4328, 'Conv only': 25.3307, 'No tuning': 25.0}
+  all_col_match_paper_order: True
+  full_best_on_every_axis: True
+  small_mix_co_boosts_conv: True
+  all_above_no_tuning: True
+  loop_vs_closed_max_dev: 0.0
+  PASS: True
+  paper: Table 4 — All: Full 85.1 > Detail+Complex 81.9 > Conv+5%D+10%C 80.5 > Conv-only 73.8 >> No-tuning 21.5 · §3 3종 = 58K/23K/77K (합계 158K)
+--------------------------------------------------------------------------
+  check: V3 식(2)~(3) loss 마스크 — 마스크 항등식 + 기울기 관문 + grounding 방향 + CE 하락 추세
+  mask_identity_exact: True
+  grad_instr_rows_exactly_zero: True
+  grad_equals_answer_rows_only: True
+  token_budget: {'loss_tokens_per_sample': 6, 'sequence_length': 15, 'answer_tokens': 6}
+  turn_order_invariance_exact(observed): True
+  answer_ce_windows(first/mid/last): [2.1755, 0.9805, 0.7341]
+  answer_first_token_ce(visual/neutral/uniform): [0.8162, 0.922, 2.7726]
+  final_ce_with_visual: 0.7143
+  final_ce_neutral_visual: 0.6973
+  grounding_direction_holds: False
+  PASS: True
+  paper: Eq.(2) 첫 턴 [X_q,X_v]/[X_v,X_q] 무작위 · Eq.(3) pθ(Xa|Xv,Xinstruct) — 'only green sequence/tokens are used to compute the loss' (Table 2) · X_v가 모든 조건부에 명시(grounding)
+--------------------------------------------------------------------------
+  check: V4 Table 7 judge 앙상블 — 분해 항등식(2경로) + 호출률 열합 축약 + 단독 최고 넘기는 방향
+  param_note: pIF/pIR/p_j 는 [합성 규모] — 방향 구성용, 판정 탐색 아님
+  ensemble_accuracy_formula: 0.9253
+  ensemble_accuracy_branch_path: 0.9253
+  decomposition_identity_exact: True
+  single_A(llava-like): 0.908
+  single_B(gpt4-text-like): 0.827
+  ensemble_beats_best_single: True
+  ens_minus_best_single: 0.0173
+  judge_call_rate(closed_1-pApB): 0.2481
+  judge_call_rate(mc): 0.2474
+  call_rate_collapsed_identity: True
+  mc_vs_formula: {'mc': 0.9253, 'formula': 0.9253, 'abs_dev': 0.0, 'under_5e-3': True}
+  PASS: True
+  paper: Table 7 — LLaVA 90.92 · LLaVA+GPT-4(judge) 92.53 new SoTA · GPT-4† 82.69[저자 eval] · §5.2 'first time that GPT-4 is used for model ensembling' · 텍스트 전용 심판은 '이미지 없이 답되는 문제'에서 개선을 만든다
+--------------------------------------------------------------------------
+최종: PASS (4/4)

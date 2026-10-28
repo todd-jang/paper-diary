@@ -2,9 +2,16 @@
 
 > **논문**: LLaVA = arXiv [2304.08485](https://arxiv.org/abs/2304.08485) (v1 원문 접근 완료) · **LLaVA-1.5 = 별도 보고서** [2310.03744](https://arxiv.org/abs/2310.03744) "Improved Baselines with Visual Instruction Tuning" — *abs comment: CVPR 2024 (highlight)* ✅ abs 확인. 핵심 인물: Haotian Liu, Chunyuan Li, Qingyang Wu (UW–Madison·MSR·Columbia), Yong Jae Lee — 구조 = **CLIP ViT-L/14(동결) + 단일 선형 프로젝션 W(최초) + Vicuna**.
 
-## 🧪 심화 산출물 (`day13_llava/` — 제작 진행 중)
+## 🧪 심화 산출물 (`day13_llava/` — 키트 완성 🟢 2026-10-28)
 
-<!-- 키트 제작 예정: 00_검증팩트시트 → 01_코드워크스루 → 02_수식유도 → 03_실습 → 04_비교표. 완성 시 이 절에 링크 · 데모 PASS 조건 기입. -->
+- [00_검증팩트시트.md](day13_llava/00_검증팩트시트.md) — arXiv HTML v2 전문 직접 대조(수치 출처 라벨링)
+- [01_코드워크스루.md](day13_llava/01_코드워크스루.md) — §3 데이터 파이프라인 → §4 모델·학습 → §5 평가
+- [02_수식유도.md](day13_llava/02_수식유도.md) — 식(1)~(3) 구조 + 데모 V1~V4 대응표
+- [03_실습.md](day13_llava/03_실습.md) — `llava_demo.py` 4검증 실측 · **PASS 4/4**(2026-10-28, seed 42)
+- [04_비교표.md](day13_llava/04_비교표.md) — 팩트시트 수치 총정리 + CLIP/Flamingo/BLIP-2/GLIP 구조 대응(직접 비교 ❌)
+- [05_실전_배포_가이드.md](day13_llava/05_실전_배포_가이드.md) — 공식 레포 경로(v1 = v1.0.1 태그 라벨) + GPT-assisted 평가 파이프라인
+- [06_Quest_안내.md](day13_llava/06_Quest_안내.md) — 저녁 세션 퀘스트 5문항(데모 실측 기반)
+- 데모: `llava_demo.py` — V1 Stage 1 정합(σ=0 복원 항등식·잔차 직교성·모듈 동결) · V2 Table 4 혼입(All 순서 재현·공동 확장) · V3 식(2)(3) 마스크(항등식·기울기 관문·grounding 게이트) · V4 Table 7 judge 앙상블(분해 항등식·호출률 축약·방향) — 로그 `runs/llava_demo_output.txt`, 차트 4종 `runs/figures/`
 
 ## 🎯 오늘의 관통 질문
 

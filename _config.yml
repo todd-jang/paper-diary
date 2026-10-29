@@ -1,4 +1,14 @@
 title: My Paper Diary
-description: A simple personal journal built with Jekyll and GitHub Pages.
+description: Personal research diary
 theme: minima
 repository: todd-jang/paper-diary
+
+# Add custom navigation pages to the header
+header_pages:
+  - index.md
+  - about.md
+
+# Add links to your social profiles or sidebar equivalents in footer/header
+minima:
+  social_links:
+    - { platform: github, user_url: "https://github.com/todd-jang" }

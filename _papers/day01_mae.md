@@ -15,11 +15,11 @@ paper_id: mae
 ---
 
 ## 🧪 심화 산출물 (day01_mae/)
-- 📜 [`01_코드워크스루.md`](./day01_mae/01_코드워크스루.md) — PyTorch 구현 라인바이런 해설
-- 📐 [`02_수식유도.md`](./day01_mae/02_수식유도.md) — 손실함수·비대칭 구조 수학적 분석
-- 💻 [`03_실습.md`](./day01_mae/03_실습.md) — 작은 데이터셋으로 직접 사전학습 (+ `mae_pretrain_demo.py`)
-- 📊 [`04_비교표.md`](./day01_mae/04_비교표.md) — MAE vs BEiT vs SimMIM vs iBOT vs DINOv2
-- 🏗️ [`minimae/`](./day01_mae/minimae/) — **ImageNet-1K 서브셋 FAIR MAE 충실 재현** (실제 학습·검증)
+- 📜 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day01_mae/01_코드워크스루.md) — PyTorch 구현 라인바이런 해설
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day01_mae/02_수식유도.md) — 손실함수·비대칭 구조 수학적 분석
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day01_mae/03_실습.md) — 작은 데이터셋으로 직접 사전학습 (+ `mae_pretrain_demo.py`)
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day01_mae/04_비교표.md) — MAE vs BEiT vs SimMIM vs iBOT vs DINOv2
+- 🏗️ [`minimae/`](https://github.com/todd-jang/paper-diary/tree/main/day01_mae/minimae/) — **ImageNet-1K 서브셋 FAIR MAE 충실 재현** (실제 학습·검증)
 
 > 검증됨:
 > - 데모(CIFAR): `mae_pretrain_demo.py` → loss 0.2872→0.1028

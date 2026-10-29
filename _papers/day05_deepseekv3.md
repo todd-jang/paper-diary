@@ -16,10 +16,10 @@ paper_id: deepseek-v3
 ---
 
 ## 🧪 심화 산출물 (day05_deepseek_v3/)
-- 📜 [`01_코드워크스루.md`](./day05_deepseek_v3/01_코드워크스루.md) — 공식 추론 코드 라인바이런: `Gate`(bias는 `dim==7168`에서만 켜짐) · `MoE` · FP8 `Linear`(128×128 블록 스케일) · **MTP는 코드에 없음**
-- 📐 [`02_수식유도.md`](./day05_deepseek_v3/02_수식유도.md) — 식 (12)–(20) aux-loss-free 균형, 식 (21)–(25) MTP, FP8 양자화·누산·승격(promotion)
-- 💻 [`03_실습.md`](./day05_deepseek_v3/03_실습.md) — `v3_demo.py`로 균형 3전략·MTP 창·FP8 격자·파라미터 회계 **수치 검증**(MPS 실측)
-- 📊 [`04_비교표.md`](./day05_deepseek_v3/04_비교표.md) — **V3 자기 환경 안에서의 true ablation 4종**(부하균형 on/off · MTP on/off · scope · FP8 on/off)
+- 📜 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day05_deepseek_v3/01_코드워크스루.md) — 공식 추론 코드 라인바이런: `Gate`(bias는 `dim==7168`에서만 켜짐) · `MoE` · FP8 `Linear`(128×128 블록 스케일) · **MTP는 코드에 없음**
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day05_deepseek_v3/02_수식유도.md) — 식 (12)–(20) aux-loss-free 균형, 식 (21)–(25) MTP, FP8 양자화·누산·승격(promotion)
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day05_deepseek_v3/03_실습.md) — `v3_demo.py`로 균형 3전략·MTP 창·FP8 격자·파라미터 회계 **수치 검증**(MPS 실측)
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day05_deepseek_v3/04_비교표.md) — **V3 자기 환경 안에서의 true ablation 4종**(부하균형 on/off · MTP on/off · scope · FP8 on/off)
 
 ---
 

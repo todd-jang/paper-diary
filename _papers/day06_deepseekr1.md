@@ -13,10 +13,10 @@ paper_id: deepseek-r1
 > 이전 Day 연결: Day 5의 V3-Base가 **R1의 출발점**이다(§1, §2.3).
 
 ## 🧪 심화 산출물 (day06_deepseek_r1/)
-- 📜 [`01_코드워크스루.md`](./day06_deepseek_r1/01_코드워크스루.md) — **R1 저장소 실사**(루트 5항목: 코드 없음 · MIT 단일 · 실행은 V3 위임) + 프롬프트·평가 프로토콜(Table 1 · README) + `r1_demo.py` 식↔코드 라인 대응
-- 📐 [`02_수식유도.md`](./day06_deepseek_r1/02_수식유도.md) — 식 (1)–(3) GRPO(가치망 제거·`ΣA=0`·난이도 게이팅·두 불변성), 식 (2) k3 KL 비음수 증명, 식 (4) 규칙 보상, 식 (5)–(6) 모델 보상, 식 (7) 언어 일관성, **§3.2.1 `ε=10` 원문 불일치**
-- 💻 [`03_실습.md`](./day06_deepseek_r1/03_실습.md) — `r1_demo.py`(429줄)로 **4검증 수치 확인**(MPS 실측): 그룹 이점 불변성 · 규칙 보상 분해 · LC 비용 곡선 · 보상 해킹 재현
-- 📊 [`04_비교표.md`](./day06_deepseek_r1/04_비교표.md) — 대조군 **성격별 분류**: Table 3(단계별) · Table 12(계보) · **부록 B.6(유일한 true ablation)** · **Table 16(동일 32B 증류 vs RL)** · Table 15 · Table 7
+- 📜 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day06_deepseek_r1/01_코드워크스루.md) — **R1 저장소 실사**(루트 5항목: 코드 없음 · MIT 단일 · 실행은 V3 위임) + 프롬프트·평가 프로토콜(Table 1 · README) + `r1_demo.py` 식↔코드 라인 대응
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day06_deepseek_r1/02_수식유도.md) — 식 (1)–(3) GRPO(가치망 제거·`ΣA=0`·난이도 게이팅·두 불변성), 식 (2) k3 KL 비음수 증명, 식 (4) 규칙 보상, 식 (5)–(6) 모델 보상, 식 (7) 언어 일관성, **§3.2.1 `ε=10` 원문 불일치**
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day06_deepseek_r1/03_실습.md) — `r1_demo.py`(429줄)로 **4검증 수치 확인**(MPS 실측): 그룹 이점 불변성 · 규칙 보상 분해 · LC 비용 곡선 · 보상 해킹 재현
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day06_deepseek_r1/04_비교표.md) — 대조군 **성격별 분류**: Table 3(단계별) · Table 12(계보) · **부록 B.6(유일한 true ablation)** · **Table 16(동일 32B 증류 vs RL)** · Table 15 · Table 7
 
 ## 🎯 오늘의 관통 질문
 

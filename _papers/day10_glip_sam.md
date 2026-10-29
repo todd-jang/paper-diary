@@ -13,15 +13,15 @@ paper_id: glip-sam
 > 이전 Day 연결: **Day 09(3D 조사+포스터)**로 DETR 계열의 3D 확장 지형을 잡았고, **오늘은 시각-언어 트랙의 첫 문**. 오늘 오후에 **D12 CLIP(당김 확정)** → D11 자율(10/24) → **D13 LLaVA(10/26)**. GLIP(텍스트=로짓) → CLIP(텍스트=분류기) → LLaVA(텍스트=지시)의 나선이 여기서 시작된다.
 
 ## 🧪 심화 산출물 (`day10_glip_sam/` — 자료 10/22 완성)
-- 📜 [`00_검증팩트시트.md`](./day10_glip_sam/00_검증팩트시트.md) — 표 번호·조건 확인 전용. 검증선: **"61.5"는 COCO 편입 변형**(zero-shot 아님) · 공식 README 수치는 **last checkpoint**(논문 표와 구분: GLIP-L ODinW 51.2 vs 52.1) · **SAM 파라미터 표기 오기(288M↔308M) 원문 구분** · "SAM 3마스크 항상" 금지(다중 프롬프트 예외)
-- 🧭 [`01_코드워크스루.md`](./day10_glip_sam/01_코드워크스루.md) — GLIP 데이터 전/테스트 흐름 · X-MHA(딥퓨전) 경로
-- 📐 [`02_수식유도.md`](./day10_glip_sam/02_수식유도.md) — 로짓 스왑 등가성 · 토큰 평균 분산 감소(≈1/K) · SAM 20:1 손실 구성
-- 💻 [`03_실습.md`](./day10_glip_sam/03_실습.md) — 데모 2종 **PASS 4+4**:
+- 📜 [`00_검증팩트시트.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/00_검증팩트시트.md) — 표 번호·조건 확인 전용. 검증선: **"61.5"는 COCO 편입 변형**(zero-shot 아님) · 공식 README 수치는 **last checkpoint**(논문 표와 구분: GLIP-L ODinW 51.2 vs 52.1) · **SAM 파라미터 표기 오기(288M↔308M) 원문 구분** · "SAM 3마스크 항상" 금지(다중 프롬프트 예외)
+- 🧭 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/01_코드워크스루.md) — GLIP 데이터 전/테스트 흐름 · X-MHA(딥퓨전) 경로
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/02_수식유도.md) — 로짓 스왑 등가성 · 토큰 평균 분산 감소(≈1/K) · SAM 20:1 손실 구성
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/03_실습.md) — 데모 2종 **PASS 4+4**:
   - `glip_demo.py` — V1 토큰평균 분산감소(잔여 0.2479 ≈ 1/K=0.25, 검출 확률 0.6875→0.75) · V2 로짓스왑 등가성(σ=0 항등식 + agreement 비증가 1.0→0.6719→0.3438→0.2344) · V3 딥퓨전 조건부 이득(조준 어텐션만 +, 무학습 softmax −) · V4 프롬프트 청킹(coverage 1.0, 일치 1.0)
   - `sam_prompt_demo.py` — V1 3마스크 중첩 · V2 20:1 최소손실↔최대 IoU(3/3) · V3 다중 프롬프트 예외(1출력, IoU 0.8519→1.0000) · V4 순수 focal 붕괴 0/3 진단(ε 포화 — dice 포함 구성 3/3)
-- 📊 [`04_비교표.md`](./day10_glip_sam/04_비교표.md) — 표 수치 총정리(Table 5/7/11/12–13 · Fig 6 · §7.6 · §B)
-- 🛠️ [`05_실전_배포_가이드.md`](./day10_glip_sam/05_실전_배포_가이드.md) — 라이선스 · 체크리스트
-- 📚 [`06_Quest_안내.md`](./day10_glip_sam/06_Quest_안내.md) — 저녁 세션용(질문 원본·준비물·힌트)
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/04_비교표.md) — 표 수치 총정리(Table 5/7/11/12–13 · Fig 6 · §7.6 · §B)
+- 🛠️ [`05_실전_배포_가이드.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/05_실전_배포_가이드.md) — 라이선스 · 체크리스트
+- 📚 [`06_Quest_안내.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/06_Quest_안내.md) — 저녁 세션용(질문 원본·준비물·힌트)
 - 📊 **차트 4종** — `day10_glip_sam/runs/figures/`: `01_glip_coco_zeroshot.png` · `02_glip_odinw_shots.png` · `03_sam_data_engine.png` · `04_sam_eval_edges_proposals.png` (생성: `make_charts.py`)
 
 ## 🎯 오늘의 관통 질문
@@ -44,7 +44,7 @@ paper_id: glip-sam
 
 ## 🧠 오늘의 Socratic Quest (5문항 — 논문서술 형식)
 
-> **작성 형식(확정안 유지).** 문항당 **하나의 단락**: ① **주장** → ② **근거**(식·표 번호·절 번호·실측 수치 직접 인용) → ③ **경계 조건**(반례·성립 한계). 5~10문장, 나열식 불릿 ✕. 힌트는 [`day10_glip_sam/06_Quest_안내.md`](./day10_glip_sam/06_Quest_안내.md).
+> **작성 형식(확정안 유지).** 문항당 **하나의 단락**: ① **주장** → ② **근거**(식·표 번호·절 번호·실측 수치 직접 인용) → ③ **경계 조건**(반례·성립 한계). 5~10문장, 나열식 불릿 ✕. 힌트는 [`day10_glip_sam/06_Quest_안내.md`](https://github.com/todd-jang/paper-diary/blob/main/day10_glip_sam/06_Quest_안내.md).
 
 **⚠️ 이번 문항에서 조심할 함정 4가지**
 1. **"61.5"는 COCO 편입 변형** — zero-shot/언어 모델 어필 컨텍스트에 붙이면 오답 처리.

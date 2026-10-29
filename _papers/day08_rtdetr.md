@@ -13,11 +13,11 @@ paper_id: rt-detr
 > 이전 Day 연결: **Day 07(DETR + RT-DETR 심화)**에서 DETR의 세트 예측 원리와 RT-DETR의 개요를 잡았고, **오늘은 RT-DETR 논문 본문**을 깊게 읽어 "실전 손잡이"를 확정한다. **이 Day가 DETR 계열 트랙의 마지막**이고, 다음은 10/22 GLIP+SAM → 10/23 자율세션 → 10/24 CLIP → 10/26~27 LLaVA.
 
 ## 🧪 심화 산출물 (day08_rtdetr/)
-- 📜 [`01_코드워크스루.md`](./day08_rtdetr/01_코드워크스루.md) — 공식 저장소(`lyuwenyu/rt-detr`) 실사: `HybridEncoder`(AIFI는 `use_encoder_idx=[2]`로 S5 한정 · `CSPRepLayer`가 논문 Fig 5 fusion block) · `rtdetr_decoder.py:491` top-K(분수 점수 기준) · `matcher.py:89-91` VarFocal 매칭 비용 · `eos_coef=1e-4`(DETR 0.1의 1/250) · config `rtdetr_r50vd.yml`이 640×640→8400 후보의 출처 · v1→v2 코드 차이
-- 📐 [`02_수식유도.md`](./day08_rtdetr/02_수식유도.md) — 하이브리드 인코더 비용 모델($M^2$ vs $\propto HW$) · uncertainty $U=\|\mathcal P-\mathcal C\|$와 **1차원 프록시의 퇴화 해** · NMS 비용 모델 · 디코더 깊이↔지연(층당 0.4~0.5ms, ΔAP +2.2→+0.1)
-- 💻 [`03_실습.md`](./day08_rtdetr/03_실습.md) — `rtdetr_demo.py` 4검증(CPU 실측): ① NMS 비용 모델(conf↑ 시간↓ 정확도↓ / IoU↑ 시간↑) ② attention 토큰 스케일링(400→3200 = 42.3배, 441배 토큰 차) ③ **인코더 변형 A~E 지연 순서 = 논문과 완전 일치** ④ uncertainty 단독 최적화의 퇴화 해
-- 📊 [`04_비교표.md`](./day08_rtdetr/04_비교표.md) — Table 1(NMS 임계값) · Table 2(SOTA 13행) · Table 3(인코더 A~E) · Table 4(쿼리 선택) · Table 5(디코더 깊이) · §6 "같이 놓으면 안 되는 것"
-- 🛠️ [`05_실전_배포_가이드.md`](./day08_rtdetr/05_실전_배포_가이드.md) — 공식(Paddle/PyTorch/benchmark) · **Ultralytics 경로(사용자 보유 `rtdetr-l.pt`의 정체 — HGNetV2 백본 + AGPL-3.0)** · TensorRT/ONNX export 주의 3가지 · 실전 체크리스트 6항목
+- 📜 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day08_rtdetr/01_코드워크스루.md) — 공식 저장소(`lyuwenyu/rt-detr`) 실사: `HybridEncoder`(AIFI는 `use_encoder_idx=[2]`로 S5 한정 · `CSPRepLayer`가 논문 Fig 5 fusion block) · `rtdetr_decoder.py:491` top-K(분수 점수 기준) · `matcher.py:89-91` VarFocal 매칭 비용 · `eos_coef=1e-4`(DETR 0.1의 1/250) · config `rtdetr_r50vd.yml`이 640×640→8400 후보의 출처 · v1→v2 코드 차이
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day08_rtdetr/02_수식유도.md) — 하이브리드 인코더 비용 모델($M^2$ vs $\propto HW$) · uncertainty $U=\|\mathcal P-\mathcal C\|$와 **1차원 프록시의 퇴화 해** · NMS 비용 모델 · 디코더 깊이↔지연(층당 0.4~0.5ms, ΔAP +2.2→+0.1)
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day08_rtdetr/03_실습.md) — `rtdetr_demo.py` 4검증(CPU 실측): ① NMS 비용 모델(conf↑ 시간↓ 정확도↓ / IoU↑ 시간↑) ② attention 토큰 스케일링(400→3200 = 42.3배, 441배 토큰 차) ③ **인코더 변형 A~E 지연 순서 = 논문과 완전 일치** ④ uncertainty 단독 최적화의 퇴화 해
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day08_rtdetr/04_비교표.md) — Table 1(NMS 임계값) · Table 2(SOTA 13행) · Table 3(인코더 A~E) · Table 4(쿼리 선택) · Table 5(디코더 깊이) · §6 "같이 놓으면 안 되는 것"
+- 🛠️ [`05_실전_배포_가이드.md`](https://github.com/todd-jang/paper-diary/blob/main/day08_rtdetr/05_실전_배포_가이드.md) — 공식(Paddle/PyTorch/benchmark) · **Ultralytics 경로(사용자 보유 `rtdetr-l.pt`의 정체 — HGNetV2 백본 + AGPL-3.0)** · TensorRT/ONNX export 주의 3가지 · 실전 체크리스트 6항목
 - 📊 **차트 4종** — `runs/chart_nms_cost.png` · `chart_attention_scaling.png` · `chart_encoder_variants.png` · `chart_uncertainty_degeneracy.png` (생성: `make_charts.py`)
 
 ## 🎯 오늘의 관통 질문

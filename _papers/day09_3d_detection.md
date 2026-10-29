@@ -11,11 +11,11 @@ paper_id: 3d-detection
 > 대상: DETR3D (2110.06922, CoRL 2021) → PETR (2203.05625, ECCV 2022) → PETRv2 (2206.01256, ICCV 2023) → Sparse4D (2211.10581) → Sparse4D v2 (2305.14018)
 > 진행 방식: **자율 세션** — Quest 형식 없음. 이 노트는 세션 기록을 2026-10-23에 소급 정리한 요약이다.
 > 가설: **"Lift를 어떻게 하느냐"가 이 계열의 분수령** — 명시적 투영 인덱싱 → 사전 연산 3D PE → 앵커 중심 희소 샘플링 + 순환 전파.
-> 이전 Day 연결: **Day 08(RT-DETR)로 DETR 계열 트랙 종료** → D9 3D 확장(개념 지도: [`3D_OBJECT_DETECTION_지도.md`](./3D_OBJECT_DETECTION_지도.md)) → 다음은 D10 GLIP/SAM(10/23) · D11 자율(10/24) · D12 CLIP(10/23 당김) · D13 LLaVA(10/26).
+> 이전 Day 연결: **Day 08(RT-DETR)로 DETR 계열 트랙 종료** → D9 3D 확장(개념 지도: [`3D_OBJECT_DETECTION_지도.md`](https://github.com/todd-jang/paper-diary/blob/main/3D_OBJECT_DETECTION_지도.md)) → 다음은 D10 GLIP/SAM(10/23) · D11 자율(10/24) · D12 CLIP(10/23 당김) · D13 LLaVA(10/26).
 
 ## 🧪 산출물
-- 📜 [`day09_3d_fsd/01_초안.md`](./day09_3d_fsd/01_초안.md) — 조사 초안. **인용 수치 전용 원칙**: 모든 숫자는 원 논문 표·초록 또는 공식 README에서 직접 확인 + **조건(분할·백본·해상도·GPU) 명시**. 우리 환경 재측정 수치 0건.
-- 🗺️ [`3D_OBJECT_DETECTION_지도.md`](./3D_OBJECT_DETECTION_지도.md) — 3D 트랙 개념 지도(10/20 작성 · 링크 44편 arXiv ID 검증 완료).
+- 📜 [`day09_3d_fsd/01_초안.md`](https://github.com/todd-jang/paper-diary/blob/main/day09_3d_fsd/01_초안.md) — 조사 초안. **인용 수치 전용 원칙**: 모든 숫자는 원 논문 표·초록 또는 공식 README에서 직접 확인 + **조건(분할·백본·해상도·GPU) 명시**. 우리 환경 재측정 수치 0건.
+- 🗺️ [`3D_OBJECT_DETECTION_지도.md`](https://github.com/todd-jang/paper-diary/blob/main/3D_OBJECT_DETECTION_지도.md) — 3D 트랙 개념 지도(10/20 작성 · 링크 44편 arXiv ID 검증 완료).
 - 🧾 **포스터 키트 `poster/`** — `poster_3d_space.html`(9카드) · A0/A1 PDF 빌더(`build_poster.py`) · 문안 · 슬라이드 3장 · 레이아웃 겹침 검사(`qa_poster.py`).
 - 📄 **A1L/A0L PDF+PNG 4종** — `poster/runs/poster_3d_space_A1L.pdf`/`.png` · `poster_3d_space_A0L.pdf`/`.png` · QA PASS.
 - 근거 선: 라이브러리니안 팩트시트 — **오기 arXiv ID 4건 교정(abs 페이지 재검증) · 미검증 수치 배제**.

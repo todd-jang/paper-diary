@@ -17,11 +17,11 @@ paper_id: beit-simmim
 ---
 
 ## 🧪 심화 산출물 (day02_beit_simmim/)
-- 📜 [`01_코드워크스루.md`](./day02_beit_simmim/01_코드워크스루.md) — BEiT(dVAE+MIM) / SimMIM 라인바이런 해설
-- 📐 [`02_수식유도.md`](./day02_beit_simmim/02_수식유도.md) — 두 목적함수(CE vs ℓ1)와 dVAE 2단계 우도의 수학적 분해
-- 💻 [`03_실습.md`](./day02_beit_simmim/03_실습.md) — SimMIM 축소판 직접 구현·학습 (+ `simmim_demo.py`)
-- ➕ **BEiT 2단계 데모**(Day 3에서 추가) → [`day03_ibot_dinov2/beit_2stage_demo.py`](./day03_ibot_dinov2/beit_2stage_demo.py) — VQ-VAE(dVAE-lite) 동결 → hard 토큰 MIM
-- 📊 [`04_비교표.md`](./day02_beit_simmim/04_비교표.md) — MAE vs BEiT vs SimMIM (3자 심층 비교)
+- 📜 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day02_beit_simmim/01_코드워크스루.md) — BEiT(dVAE+MIM) / SimMIM 라인바이런 해설
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day02_beit_simmim/02_수식유도.md) — 두 목적함수(CE vs ℓ1)와 dVAE 2단계 우도의 수학적 분해
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day02_beit_simmim/03_실습.md) — SimMIM 축소판 직접 구현·학습 (+ `simmim_demo.py`)
+- ➕ **BEiT 2단계 데모**(Day 3에서 추가) → [`day03_ibot_dinov2/beit_2stage_demo.py`](https://github.com/todd-jang/paper-diary/blob/main/day03_ibot_dinov2/beit_2stage_demo.py) — VQ-VAE(dVAE-lite) 동결 → hard 토큰 MIM
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day02_beit_simmim/04_비교표.md) — MAE vs BEiT vs SimMIM (3자 심층 비교)
 
 ---
 

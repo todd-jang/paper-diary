@@ -16,10 +16,10 @@ paper_id: deepseek-v2
 ---
 
 ## 🧪 심화 산출물 (day04_deepseek_v2/)
-- 📜 [`01_코드워크스루.md`](./day04_deepseek_v2/01_코드워크스루.md) — MLA(저랭크 KV 압축·흡수·decoupled RoPE) + DeepSeekMoE 라인바이런
-- 📐 [`02_수식유도.md`](./day04_deepseek_v2/02_수식유도.md) — 식 (9)–(22): 압축, 흡수 항등식 `qᵀk=(c^Q)ᵀA_i c^KV`, decoupled RoPE, MoE 게이트
-- 💻 [`03_실습.md`](./day04_deepseek_v2/03_실습.md) — `mla_demo.py`로 KV cache·흡수·RoPE 흡수파괴 **수치 검증**(MPS 실측 · 로그 `runs/mla_demo_stdout.txt`)
-- 📊 [`04_비교표.md`](./day04_deepseek_v2/04_비교표.md) — MHA/MQA/GQA/**MLA** + Dense/MoE/**DeepSeekMoE** 비교
+- 📜 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day04_deepseek_v2/01_코드워크스루.md) — MLA(저랭크 KV 압축·흡수·decoupled RoPE) + DeepSeekMoE 라인바이런
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day04_deepseek_v2/02_수식유도.md) — 식 (9)–(22): 압축, 흡수 항등식 `qᵀk=(c^Q)ᵀA_i c^KV`, decoupled RoPE, MoE 게이트
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day04_deepseek_v2/03_실습.md) — `mla_demo.py`로 KV cache·흡수·RoPE 흡수파괴 **수치 검증**(MPS 실측 · 로그 `runs/mla_demo_stdout.txt`)
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day04_deepseek_v2/04_비교표.md) — MHA/MQA/GQA/**MLA** + Dense/MoE/**DeepSeekMoE** 비교
 
 ---
 

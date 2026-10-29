@@ -13,13 +13,13 @@ paper_id: clip
 > 이전 Day 연결: **Day 10(GLIP/SAM)**에서 텍스트의 첫 접점(로짓 스왑/모호성 3분해)을 잡았고, **CLIP은 그 전제(텍스트 임베딩 공간)를 만든 논문**. 다음 D11 자율(10/24) → **D13 LLaVA(10/26)** — "말이 지시"로 확장. GLIP(텍스트=로짓) ↔ CLIP(텍스트=분류기) ↔ LLaVA(텍스트=지시)의 나선이 여기서 이어진다.
 
 ## 🧪 심화 산출물 (`day12_clip/`)
-- 📜 [`00_검증팩트시트.md`](./day12_clip/00_검증팩트시트.md) — LaTeX 원본 e-print 검증. 원칙: **모든 수치는 논문 표/초록 또는 공식 README + 조건(분할·백본·해상도·GPU)**. 원문 불일치 명시(본문 BPE 어휘 "49,152" ↔ 부록 "49,408" 등) + 인용 금지 목록
-- 🧭 [`01_코드워크스루.md`](./day12_clip/01_코드워크스루.md) — 공식 pseudocode 11줄 인용(l2_normalize · logits = I_e·T_eᵀ·exp(t) · loss = (loss_i+loss_t)/2) + 아키텍처·학습 제한 표
-- 📐 [`02_수식유도.md`](./day12_clip/02_수식유도.md) — 대칭 CE 2축 분해 · τ 클립 항등식 · 1/K 분산 감소 정리
-- 💻 [`03_실습.md`](./day12_clip/03_실습.md) — `clip_demo.py` **PASS 4/4**(합성 세계, 논문 수치 재현 아님 · `runs/clip_demo_output.txt`): V1 대칭 CE(분해 항등식 + 대각 행 최대 전제 + τ 비증가) · V2 logit 스케일 ×100 클립(항등식 exact, 랭킹 불변) · V3 임베딩 앙상블(상각 1:8, σ=0 동치, agreement 비증가) · V4 프롬프트 평균(ratio 0.1198 ≈ 1/8=0.125)
-- 📊 [`04_비교표.md`](./day12_clip/04_비교표.md) — Table 1(`zeroshot_table` 라벨 인용) · few-shot/앙상블/linear probe · robustness · GLIP/SAM 구조 대응(직접 비교 ❌)
-- 🛠️ [`05_실전_배포_가이드.md`](./day12_clip/05_실전_배포_가이드.md) — openai/CLIP 설치·API·함정 체크리스트
-- 📚 [`06_Quest_안내.md`](./day12_clip/06_Quest_안내.md) — 저녁 세션용(질문 원본·준비물)
+- 📜 [`00_검증팩트시트.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/00_검증팩트시트.md) — LaTeX 원본 e-print 검증. 원칙: **모든 수치는 논문 표/초록 또는 공식 README + 조건(분할·백본·해상도·GPU)**. 원문 불일치 명시(본문 BPE 어휘 "49,152" ↔ 부록 "49,408" 등) + 인용 금지 목록
+- 🧭 [`01_코드워크스루.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/01_코드워크스루.md) — 공식 pseudocode 11줄 인용(l2_normalize · logits = I_e·T_eᵀ·exp(t) · loss = (loss_i+loss_t)/2) + 아키텍처·학습 제한 표
+- 📐 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/02_수식유도.md) — 대칭 CE 2축 분해 · τ 클립 항등식 · 1/K 분산 감소 정리
+- 💻 [`03_실습.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/03_실습.md) — `clip_demo.py` **PASS 4/4**(합성 세계, 논문 수치 재현 아님 · `runs/clip_demo_output.txt`): V1 대칭 CE(분해 항등식 + 대각 행 최대 전제 + τ 비증가) · V2 logit 스케일 ×100 클립(항등식 exact, 랭킹 불변) · V3 임베딩 앙상블(상각 1:8, σ=0 동치, agreement 비증가) · V4 프롬프트 평균(ratio 0.1198 ≈ 1/8=0.125)
+- 📊 [`04_비교표.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/04_비교표.md) — Table 1(`zeroshot_table` 라벨 인용) · few-shot/앙상블/linear probe · robustness · GLIP/SAM 구조 대응(직접 비교 ❌)
+- 🛠️ [`05_실전_배포_가이드.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/05_실전_배포_가이드.md) — openai/CLIP 설치·API·함정 체크리스트
+- 📚 [`06_Quest_안내.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/06_Quest_안내.md) — 저녁 세션용(질문 원본·준비물)
 - 📊 **차트 4종** — `day12_clip/runs/figures/`: `01_clip_training_scale.png` · `02_clip_table1_vngrams.png` · `03_clip_dataset_deltas.png` · `04_clip_robustness.png` (생성: `make_charts.py`)
 - 🔒 **입력 원본 확보** — `day12_clip/src/`(clip_paper.tex · 공식 README · LICENSE 등 40 files — 표 라벨(`zeroshot_table`, `table:robustness` 등)로 인용하는 근거 원본)
 
@@ -42,7 +42,7 @@ paper_id: clip
 
 ## 🧠 오늘의 Socratic Quest (5문항 — 논문서술 형식)
 
-> **작성 형식.** 문항당 **하나의 단락**: ① **주장** → ② **근거**(식·표·캡션 출처 직접 인용 — 출처 없는 숫자는 인정하지 않음) → ③ **경계 조건**. 힌트는 [`day12_clip/06_Quest_안내.md`](./day12_clip/06_Quest_안내.md).
+> **작성 형식.** 문항당 **하나의 단락**: ① **주장** → ② **근거**(식·표·캡션 출처 직접 인용 — 출처 없는 숫자는 인정하지 않음) → ③ **경계 조건**. 힌트는 [`day12_clip/06_Quest_안내.md`](https://github.com/todd-jang/paper-diary/blob/main/day12_clip/06_Quest_안내.md).
 
 **Q1. "대칭" 교차엔트로피 — 대칭이 아니어도 학습은 되지 않나?**
 - **핵심**: pseudocode의 `loss_i = CE(logits, labels, axis=0)`(텍스트 방향)와 `loss_t = CE(logits, labels, axis=1)`(이미지 방향)의 차이, 그리고 이 두 방향이 **같은 logits 행렬**을 두 번 쓰는 이유.

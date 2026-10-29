@@ -1,0 +1,53 @@
+<header class="site-header">
+  <div class="wrapper nav-wrapper">
+    <a class="site-title" rel="author" href="{{ '/' | relative_url }}">Paper Diary</a>
+    <nav class="site-nav">
+      <div class="trigger">
+        <a class="page-link" href="{{ '/' | relative_url }}">Home</a>
+        <a class="page-link" href="{{ '/about/' | relative_url }}">About</a>
+        <!-- Add links to any custom categories or tags pages here -->
+        <a class="page-link" href="https://github.com/todd-jang/paper-diary" target="_blank">GitHub</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-bottom: 1px solid #e8e8e8;
+    background-color: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 15px 0;
+    margin-bottom: 30px;
+  }
+  .nav-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  .site-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #2c3e50;
+    text-decoration: none;
+  }
+  .site-nav .trigger {
+    display: flex;
+    gap: 20px;
+  }
+  .site-nav .page-link {
+    color: #4a5568;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+  .site-nav .page-link:hover {
+    color: #000000;
+    text-decoration: underline;
+  }
+</style>

@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 01 — MAE: Masked Autoencoders Are Scalable Vision Learners"
 date: 2026-10-15
+paper_id: mae
 ---
 
 # Day 01 — MAE: Masked Autoencoders Are Scalable Vision Learners

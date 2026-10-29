@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 05 — DeepSeek-V3: Aux-Loss-Free 라우팅 · MTP · FP8"
 date: 2026-10-19
+paper_id: deepseek-v3
 ---
 
 # Day 05 — DeepSeek-V3: Aux-Loss-Free 라우팅 · MTP · FP8 (671B를 37B로 돌리는 법)

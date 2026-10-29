@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 09 — 카메라 3D 탐지 조사: DETR3D → PETR → Sparse4D"
 date: 2026-10-22
+paper_id: 3d-detection
 ---
 
 # Day 09 — 자율 세션: 카메라 3D 탐지 조사 초안 + 합본 포스터 (DETR3D → PETR → Sparse4D)

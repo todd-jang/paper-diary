@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 08 — RT-DETR: 실시간을 만드는 세 가지 손잡이"
 date: 2026-10-21
+paper_id: rt-detr
 ---
 
 # Day 08 — RT-DETR: 실시간을 만드는 세 가지 손잡이 (NMS 제거 · 하이브리드 인코더 · 불확실성 쿼리)

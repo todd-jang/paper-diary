@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 03 — iBOT & DINOv2: 온라인 토크나이저와 자기증류의 융합"
 date: 2026-10-18
+paper_id: ibot-dinov2
 ---
 
 # Day 03 — iBOT & DINOv2: 온라인 토크나이저와 자기증류의 융합

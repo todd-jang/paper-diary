@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 13 — LLaVA: Visual Instruction Tuning"
 date: 2026-10-26
+paper_id: llava
 ---
 
 # Day 13 · LLaVA — Visual Instruction Tuning (2026-10-26 세션)

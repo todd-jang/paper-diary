@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 07 — DETR: 세트 예측 · 평행 디코딩 · 헝가리안 매칭"
 date: 2026-10-20
+paper_id: detr
 ---
 
 # Day  반대로 DETR: 세트 예측 · 평행 디코딩 · 헝가리아리안 매칭 (심화: RT-DETR, real-time 중심)

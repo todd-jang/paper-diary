@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 02 — BEiT & SimMIM: 마스킹 이미지 모델링의 두 갈래"
 date: 2026-10-16
+paper_id: beit-simmim
 ---
 
 # Day 02 — BEiT & SimMIM: 마스킹 이미지 모델링(MIM)의 두 갈래

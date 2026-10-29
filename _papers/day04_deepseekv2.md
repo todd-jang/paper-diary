@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 04 — DeepSeek-V2: MLA와 DeepSeekMoE"
 date: 2026-10-18
+paper_id: deepseek-v2
 ---
 
 # Day 04 — DeepSeek-V2: MLA와 DeepSeekMoE (효율의 재설계)

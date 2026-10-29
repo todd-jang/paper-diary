@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 12 — CLIP: 자연어가 분류기가 되는 방식"
 date: 2026-10-23
+paper_id: clip
 ---
 
 # Day 12 — CLIP: 자연어가 분류기가 되는 방식 (대조 사전학습 · zero-shot · 프롬프트 앙상블)

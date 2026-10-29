@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 10 — GLIP + SAM: 텍스트가 시각 시스템에 처음 들어오는 두 방법"
 date: 2026-10-23
+paper_id: glip-sam
 ---
 
 # Day 10 — GLIP + SAM: 텍스트가 시각 시스템에 처음 들어오는 두 방법 (오픈셋 검출 "텍스트=로짓" · 프롬프트 분할 "모호성 3분해")

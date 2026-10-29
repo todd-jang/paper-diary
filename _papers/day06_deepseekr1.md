@@ -1,7 +1,8 @@
 ---
-layout: default
+layout: paper
 title: "Day 06 — DeepSeek-R1: RL로 추론을 학습시키다"
 date: 2026-10-19
+paper_id: deepseek-r1
 ---
 
 # Day 06 — DeepSeek-R1 (arXiv:2501.12948)

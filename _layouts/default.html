@@ -1,28 +1,22 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>{{ page.title }}</title>
-    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-  </head>
-  <body>
-    <div class="wrapper" style="display: flex;">
-      <aside style="width: 250px; padding-right: 20px;">
-        <h3>Navigation</h3>
-        <ul>
-          <li><a href="{{ '/' | relative_url }}">Home</a></li>
-          <li><a href="{{ '/about/' | relative_url }}">About</a></li>
-        </ul>
-        <h3>Recent Posts</h3>
-        <ul>
-          {% for post in site.posts limit:5 %}
-            <li><a href="{{ post.url | relative_url }}">{{ post.title }}</a></li>
-          {% endfor %}
-        </ul>
-      </aside>
-      <main style="flex: 1;">
-        {{ content }}
-      </main>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title | default: site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body>
+
+  <!-- Global Navigation Bar -->
+  {% include custom-header.html %}
+
+  <!-- Main Content Area for Posts and Pages -->
+  <main class="page-content" aria-label="Content">
+    <div class="wrapper" style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+      {{ content }}
     </div>
-  </body>
+  </main>
+
+</body>
 </html>

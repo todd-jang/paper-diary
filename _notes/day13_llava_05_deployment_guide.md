@@ -1,0 +1,89 @@
+---
+layout: default
+title: "Day 13 LLaVA — 05 · 보충: 실전·배포 가이드 — LLaVA를 실제로 돌리는 경로"
+paper_id: llava
+date: 2026-10-26
+---
+
+# 05 · 보충: 실전·배포 가이드 — LLaVA를 실제로 돌리는 경로
+
+> 스크립트 예시·설치 커맨드·수치는 **공식 저장소 README 원문**만 사용(`github.com/haotian-liu/LLaVA` README, 2026-10-28 조회). 논문 수치는 `00_검증팩트시트.md` 셀만 인용. **두 출처의 수치는 절대 혼용 금지.**
+
+## 0. 경로 지도
+
+| 경로 | 내용 | 라벨 |
+|---|---|---|
+| **① 논문 v1 세부** | CC-595K + 158K · 단일 선형 W · Vicuna (D13 논문) | `00_검증팩트시트.md` |
+| **② 공식 레포 v1 (v1.0.1 태그)** | 논문 v1 세대 훈련 스크립트 — README "For legacy models ... refer to README of `v1.0.1`" | [레포 README] |
+| **③ 공식 레포 최신 (main)** | 코드베이스는 1.5/1.6 세대 — `mlp2x_gelu` + CLIP-**336px** | [레포 README] |
+
+- **미묘함 1건**: 현재 `main` README의 Train 설명은 **LLaVA v1.5 기준**이다("Below is the latest training configuration for LLaVA v1.5. For legacy models, please refer to README of [v1.0.1]"). 이 논문(v1) 재현 경로는 **v1.0.1 태그 README**로 가야 한다 — D13은 v1 논문 범위, 1.5는 D14.
+- 라이선스: 코드 **Apache-2.0** [GitHub license 필드 직접 확인] · 단 "Usage and License Notices" — 데이터·체크포인트는 각 원 라이선스(OpenAI ToS · Llama community license 등)를 따른다 [README 원문].
+
+## 1. 설치 (README Install 절 원문 그대로)
+
+README는 "If you are not using Linux, do *NOT* proceed" — macOS는 별도 문서(`docs/macOS.md`), Windows는 `docs/Windows.md`로 분리돼 있다. **본 스터디 환경(macOS)은 데스크톱 체크포인트 서빙이 아니면 이 가이드의 기본 경로(Linux/CUDA)를 가정.**
+
+```shell
+git clone https://github.com/haotian-liu/LLaVA.git
+cd LLaVA
+conda create -n llava python=3.10 -y
+conda activate llava
+pip install --upgrade pip
+pip install -e .
+pip install -e ".[train]"              # 학습 시
+pip install flash-attn --no-build-isolation
+```
+
+## 2. 2단계 학습의 실재 구현 — v1 논문 구조의 현행화
+
+현재 main README의 구조 설명(이하 [레포 README] 수치 — **v1.5 세대**, v1 논문 수치 아님):
+
+| 단계 | README 문구 | 대응 논문 개념(D13) |
+|---|---|---|
+| (1) feature alignment | "use our **558K subset of the LAION-CC-SBU** dataset ... *frozen pretrained* vision encoder to a *frozen LLM*" | Stage 1 — θ={W}만 |
+| (2) visual instruction tuning | "use **150K GPT-generated** multimodal instruction-following data, plus around **515K VQA** data from academic-oriented tasks" | Stage 2 — θ={W, φ} |
+
+- v1.5 세대의 데이터 총량 558K + 150K(+515K VQA)는 **v1 논문(595K + 158K)과 다른 축** — "같은 파이프라인의 후속 세대 데이터"로만 기술할 것. 595K→558K의 차이는 **v1.5 본문(2310.03744) 확보 시 D14에서 대조**.
+- 커넥터 옵션(main): `--mm_projector_type mlp2x_gelu`(2층 MLP) + `--vision_tower openai/clip-vit-large-patch14-336` — **v1의 단일 선형이 1.5에서 MLP+336px로 바뀐 지점**이 원문에 남아 있다(D14 채점 보조 자료).
+
+### 하이퍼파라 (README v1.5-13B 표 — [레포 README])
+
+| 단계 | Global Batch | lr | Epochs | Max length |
+|---|---:|---:|---:|---:|
+| Pretraining | 256 | 1e-3 | 1 | 2048 |
+| Finetuning | 128 | 2e-5 | 1 | 2048 |
+
+- 논문 v1(Stage 1: bs 128 · lr 2e-3 · 1ep / Stage 2: bs 32 · lr 2e-5 · 3ep)과 **서로 다른 세대의 표** — 대조표로 쓸 때 세대 라벨 필수.
+- "Always keep the global batch size the same: per_device_train_batch_size × gradient_accumulation_steps × num_gpus" — GPU 수를 줄일 때의 규칙 [README 원문].
+
+## 3. 추론 서빙의 최소 세 가지 (README Demo 절)
+
+| 형태 | 커맨드(원문) | 참고 |
+|---|---|---|
+| Gradio 웹 UI | controller(10000) + gradio_web_server + model_worker(40000) 3프로세스 | 다중 워커(체크포인트 비교)는 같은 controller에 다른 포트 |
+| CLI | `python -m llava.serve.cli --model-path liuhaotian/llava-v1.5-7b --image-file <url> --load-4bit` | 4bit 시 "less than 8GB VRAM" [README] |
+| Apple M1/M2 | model_worker에 `--device mps` | [README] |
+
+- 양자화: `--load-4bit` / `--load-8bit` — 13B를 12GB VRAM에서 구동 가능(정확도 trade-off 첨언 [README])
+- LoRA 무병합: `--model-base lmsys/vicuna-13b-v1.3`로 베이스 LLM 지정 — 병합본(7B 13GB / 13B 25G)과 용량 계열 구분 [README]
+- 고처리량: SGLang 백엔드(`pip install "sglang[all]"` + `sglang.launch_server`) [README]
+
+## 4. GPT-assisted 평가 파이프라인 (README Evaluation 절 — Table 4/5 프로토콜의 실 구현)
+
+논문의 정량 평가(LLaVA-Bench COCO 90문항)가 그대로 평가 스크립트다:
+
+1. 응답 생성: `model_vqa.py` — qa90_questions.jsonl · COCO val 이미지 폴더 지정
+2. 상대점수 산출: `eval_gpt_review_visual.py` — **context = 캡션·박스를 본 텍스트 전용 GPT-4 응답**(`qa90_gpt4_answer.jsonl` — "captions/boxes provided") + `--rule rule.json`
+3. 요약: `summarize_gpt_review.py`
+
+이 구현 순서가 논문 §5의 심판 규칙("relative score w.r.t. 텍스트 전용 GPT-4")의 코드 화신이다 — 채점 기준(rule.json) 포함.
+
+## 5. 오늘 실습(03_실습)과의 연결
+
+| 실습 검증 | 배포 실전 함정 |
+|---|---|
+| V1 Stage 1 정합(θ={W}) | 프로젝터는 "Model Zoo에서 pretrained projector 단독" 배포 가능 — but README 경고 "It is not recommended to use legacy projectors ... if any option is off, the model will not function/train as we expected" — 정합은 코드 세대와 묶인다 |
+| V3 loss 마스크 | 답변 토큰만 학습하는 구조가 1.5의 `group_by_modality_length` 옵션과 겹쳐 체감: 언어·멀티모달 예시 샘플러 분리(속도 +25% [README]) |
+| V4 judge 앙상블 | 평가 파이프라인이 **문항 판정형 judge**를 이미 구현 — 재사용 시 OPENAI_API_KEY 필요 + 심판 규칙(rule.json)을 눈으로 뜯어 볼 것 |
+| V2 데이터 혼입(3종) | v1.5 세대는 연구 과제 VQA(+515K)까지 혼입이 확장 — "3종 혼입" 관찰이 후속 세대의 데이터 방향과 연결(D14) |

@@ -1,0 +1,123 @@
+---
+layout: default
+title: "Day 08 RT-DETR — 02 · 수식유도 — RT-DETR 고유 수식과 비용 모델"
+paper_id: rt-detr
+date: 2026-10-21
+---
+
+# 02 · 수식유도 — RT-DETR 고유 수식과 비용 모델
+
+> 원문 텍스트: `day08_rtdetr/src/rtdetr.txt` (arXiv:2304.08069 전문) · Day 07의 `02_수식유도.md`는 **DETR 원문**(매칭·GIoU 증명)을 다뤘으므로, 여기는 **RT-DETR 고유 부분**(하이브리드 인코더·불확실성·비용 모델·깊이 조절)을 다룬다.
+> 수식 표기: $\mathcal S_3,\mathcal S_4,\mathcal S_5$ = 백본 3개 스케일, $M$ = attention 토큰 수, $N$=300 쿼리.
+
+---
+
+## 1. 하이브리드 인코더 — 식 (1) (§4.2)
+
+$$\mathcal Q=\mathcal K=\mathcal V=\texttt{Flatten}(\mathcal S_5),\quad
+\mathcal F_5=\texttt{Reshape}(\texttt{AIFI}(\mathcal Q,\mathcal K,\mathcal V)),\quad
+\mathcal O=\texttt{CCFF}(\{\mathcal S_3,\mathcal S_4,\mathcal F_5\})\tag{1}$$
+
+### 1.1 비용 모델 — 왜 하위 레벨 self-attention은 "비싸고" 불필요한가
+
+attention의 시간 복잡도는 (DETR 부록 0.A.3과 동일)
+
+$$T_{\text{attn}}(M)\;\propto\;\underbrace{d^2M}_{\text{QKV 투영}}+\underbrace{dM^2}_{\text{attention 가중치}}$$
+
+여기서 $M$ = **토큰 수**. 입력 640×640, ResNet-50 기준 스케일별 토큰 수는
+
+| 레벨 | 해상도 | 토큰 수 $M$ | attention 가중치 항 $\propto dM^2$ 상대값 |
+|---|---|---|---|
+| $\mathcal S_3$ | 80×80 | 6 400 | $(6400/400)^2 = 256$배 |
+| $\mathcal S_4$ | 40×40 | 1 600 | 16배 |
+| $\mathcal S_5$ | 20×20 | 400 | 1배 |
+
+- **전체 멀티스케일 attention(변형 C) vs S5만(변형 D_S5)**: 후보 8 400 토큰을 한 번에 attention하면 $\mathcal S_5$만 처리하는 것보다 **441배** 큰 attention 행렬이 필요하다($8400^2/400^2$). 실습 [B]가 이를 실측했다: 400 → 3 200 토큰(8배)에서 시간 **42.3배**(이론 64배, 실측은 메모리 대역폭 한계로 이론보다 낮음) *(비율은 두 실행에서 42.3배 → 42.1배로 안정적이나, **지연 절대값은 실행마다 최대 2배 변동**한다 — 03_실습의 재현성 주의 참조.)*
+- **conv는 attention보다 파레토하게 싸다**: $\texttt{CCFF}$의 fusion block은 1×1 conv + RepBlock이므로 비용이 $\propto HW$ (선형)이다. 실측: 1×1 conv(256ch, 80×80) **2.24ms** vs 3 200토큰 attention **100.19ms**.
+
+### 1.2 논문의 논거 — 의미 밀도 + 중복/혼란 위험
+
+논문 §4.2:
+> *"applying the self-attention operation to high-level features with richer semantic concepts captures the connection between conceptual entities, which facilitates the localization and recognition of objects by subsequent modules. However, the intra-scale interactions of lower-level features are unnecessary due to the lack of semantic concepts and **the risk of duplication and confusion with high-level feature interactions**."*
+
+- 즉 하위 레벨을 건드리는 attention은 (i) 의미 개념이 없어 **객체 간 관계를 못 잡고**, (ii) 고해상도 특징끼리 서로 헷갈려 **중복·혼란**을 만든다. ablation이 이를 정량화한다(§5.2 Table 3): D 46.4 AP/12.2ms → D_S5 **46.8 AP/7.9ms** — 지연 **−35%**인데 AP은 **+0.4**.
+- **비용-정확도 함의**: self-attention 비용은 $M^2$로 증가하지만 정확도 기여는 $\mathcal S_5$에서 이미 포화된다(6층→12층 인코더에서 AP +1.0에 파라미터 +7.9M, Day 07 §2 참고). 그러므로 **연산이 필요한 곳(의미가 모인 곳)에만 attention을 배분**하는 것이 RT-DETR의 설계다.
+
+---
+
+## 2. 불확실성 최소화 쿼리 선택 — 식 (2)–(3) (§4.3)
+
+$$\mathcal U(\hat{\mathcal X})=\big\|\mathcal P(\hat{\mathcal X})-\mathcal C(\hat{\mathcal X})\big\|,\qquad \hat{\mathcal X}\in\mathbb R^{D}\tag{2}$$
+
+$$\mathcal L(\hat{\mathcal X},\hat{\mathcal Y},\mathcal Y)=\mathcal L_{\rm box}(\hat b,b)+\mathcal L_{\rm cls}\big(\mathcal U(\hat{\mathcal X}),\hat c,c\big)\tag{3}$$
+
+### 2.1 수식의 구조 해석
+
+- $\mathcal C$ = **분류** 예측 분포, $\mathcal P$ = **위치** 예측 분포. 둘의 **차이(불일치)**가 "이 피처에 대한 확신이 얼마인가"의 대리표다.
+- 식 (3)은 이 불확실성을 **손실에 넣는다**는 것만 의미한다 — 즉 **"불확실성이 큰 피처는 손실이 크다"**로 만들어, 인코더가 분류와 위치를 **일치시키는 방향**으로 학습되게 한다. (선택 랭킹 자체는 공개 코드의 `topk(enc_outputs_class.max(-1).values, 300)` = 분류 점수 기준 — Day 07 §4.2)
+- Table 4의 결과(§5.3): AP 47.9 → 48.7(+0.8), Prop cls 0.35% → 0.82%, Prop both 0.30% → 0.67%.
+
+### 2.2 1차원 프록시의 한계 — 퇴화 해(실습 [D]의 정량 검증)
+
+논문의 $U$는 **분포 간 거리**이지만, 구현하기 쉬운 1차원 프록시는 $U \approx \text{relu}(s - q)$ ($s$ = 분류 점수, $q$ = 위치 품질)이다. 이 프록시를 단독으로 최소화하면 **퇴화 해**가 있다:
+
+$$\arg\min_{s,q}\ \text{relu}(s-q)\quad\Rightarrow\quad s\to q\ (\text{어디로든 수렴})$$
+
+- 시작값 $s=0.90$, $q=0.20$에서 U만 최적화하면 실측 결과 $s=0.690$, $q=0.693$ — **만나는 지점**으로 수렴한다. 즉 품질을 0.20에서 실제로 끌어올리는 대신 **확신을 0.90 → 0.69로 낮추는 방향**도 최적해가 된다.
+- **분류 손실을 함께 넣으면**($-\log s$ 항) 실측 $s=0.794$, $q=0.793$ — 확신은 상대적으로 유지되고 **품질이 확신에 따라 올라간다**. 이것이 논문 의도한 메커니즘이다.
+- **결론(방법론):** U를 단독 손실로 쓰면 안 된다. RT-DETR은 식 (3)대로 **분류·위치 손실과 함께** 최적화하므로 퇴화가 억제된다. 단 **1차원 프록시로 시작한 ablation은 이 왜곡을 반드시 점검해야 한다** — Day 07 실습 [D]에서 네가 관측한 "Prop cls 1.000 → 0.127"이 정확히 이 퇴화의 실증이었다.
+
+---
+
+## 3. NMS 비용 모델 (§3.1) — 왜 NMS 없는 게 실시간에 유리한가
+
+논문 §3.1: NMS의 실행 시간은 **남은 박스 수와 두 임계값**에 주로 지배된다. Table 1(수치):
+
+| IoU thr (conf 0.001) | AP | NMS (ms) | | Conf thr (IoU 0.7) | AP | NMS (ms) |
+|---|---|---|---|---|---|---|
+| 0.5 | 52.1 | 2.24 | | 0.001 | 52.9 | 2.36 |
+| 0.6 | 52.6 | 2.29 | | 0.01 | 52.4 | 1.73 |
+| 0.8 | 52.8 | 2.46 | | 0.05 | 51.2 | 1.06 |
+
+- 구조를 쓰면: **시간 ∝ (conf 필터 통과 박스 수) × (IoU 비교 횟수)**. conf를 올리면 통과 박스가 줄고(2.36 → 1.06ms), IoU를 올리면 비교에서 살아남는 박스가 늘고(2.24 → 2.46ms) **시간은 늘어나는데 정확도는 오른다**.
+- **dilemma**: NMS-free가 아니라면 이 두 손잡이 자체가 사라진다. 논문 §3.2는 YOLO 계열이 보통 **NMS 시간을 제외한 모델 속도만 보고한다**는 점을 지적하고, NMS 플러그인까지 포함한 **end-to-end speed benchmark**를 제안한다. RT-DETR의 Table 2 FPS는 이 벤치마크 기준(T4 · TensorRT FP16)이다.
+- 실습 [A]가 이 두 방향을 합성 데이터로 재현했다: conf 0.001 → 0.25에서 NMS 시간 **57.03 → 21.29ms**로 감소, AP proxy **1.000 → 0.933**으로 하락 / IoU 0.5 → 0.8에서 시간 **43.05 → 59.95ms** 증가, AP proxy **0.967 → 1.000** 상승.
+
+---
+
+## 4. 디코더 깊이 ↔ 지연 모델 (§5.4, Table 5)
+
+| 사용 층 | AP | 지연 (ms) | 직전 층 대비 ΔAP | 직전 층 대비 Δms |
+|---|---|---|---|---|
+| 6 | 53.1 | 9.3 | +0.1 | +0.5 |
+| 5 | 53.0 | 8.8 | +0.2 | +0.5 |
+| 4 | 52.7 | 8.3 | +0.3 | +0.4 |
+| 3 | 52.4 | 7.9 | +0.3 | +0.4 |
+| 2 | 51.3 | 7.5 | +0.8 | +0.4 |
+| 1 | 49.1 | 7.0 | +2.2 | +0.5 |
+
+- **층 1개의 비용은 대략 일정(0.4–0.5ms)**인데 **정확도 이득은 층이 올라갈수록 줄어든다**(+2.2 → +0.1). 이게 **"상위 층을 거의 버리면서도 속도를 못 건다"**는 구조적 사실이고, 그래서 RT-DETR은 5층/6층 사이들에서 손해가 0.1 AP에 그친다.
+- **왜 재학습 없이 가능한가**: 원문 DETR의 aux decoding loss(§3.2)가 **모든 디코더 층에 예측 FFN과 헝가리아 손실을 붙인다** → 중간 층의 출력이 **독립적으로 학습된 예측**이라 그 지점에서 멈춰도 된다. 코드에서는 `eval_idx`로 어느 층을 쓸지 고른다(01 자료 §5).
+- 실습 [C]가 **층 구조의 상대 비용 순서**를 미니 구현으로 재현했다: 실측 A(0.00) < D_S5(0.27) < E(0.52) < B(0.90) < D(1.03) < C(2.55) ms — 논문 Table 3의 순서(A < D_S5 < E < B < D < C)와 **완전히 동일**했다.
+
+---
+
+## 5. 스케일 변형 (§4.4) — RT-DETR-L/X와 경량 모델
+
+논문 §4.4: 하이브리드 인코더는 **너비**(embedding dim·채널)와 **깊이**(transformer 층·RepBlock 수), 디코더는 **너비**(쿼리 수·층 수)로 조절한다. 즉 스케일 변형은 **"층을 쌓아 정확도를 얻는"** 쪽과 **"쿼리 수·해상도로 비용을 조절하는"** 쪽이 혼합된다.
+- 이 구조가 §5.4의 "디코더 깊이 = 속도 손잡이"와 함께 실전 배포(원하는 FPS에 맞춰 Det-k 선택)를 가능하게 한다.
+- 배포 관점: v1 `tools/export_onnx.py`, v2 `references/deploy/`가 이 레벨 조절을 **그래프 밖에서**(config의 `eval_idx`) 다룬다.
+
+---
+
+## 6. RT-DETR가 DETR에서 물려받은 것과 바꾼 것 — 한눈에
+
+| 축 | DETR (Day 07) | RT-DETR (오늘) | 근거 |
+|---|---|---|---|
+| 인코더 | 단일 스케일 global attention (H/32) | **하이브리드**: AIFI(S5) + CCFF(conv 융합) | §4.2 식 (1) |
+| 쿼리 | **고정 학습 임베딩 100개** | **인코더 top-300 피처** (content+position) | §4.3 |
+| 쿼리 품질 | (없음) | **불확실성 최소화 학습** (U=‖P−C‖) | §4.3 식 (2)(3) |
+| 분류 손실 | CE(NLL) | **VarFocal** (α 0.75 / γ 2.0) | configs `rtdetr_r50vd.yml` |
+| ∅ 억제 | eos_coef 0.1 | **eos_coef 1e-4** | `rtdetr_criterion.py:32` |
+| 디코더 깊이 | 6층 고정 | **6층 → 5층으로 자유롭게** (재학습 없이) | §5.4 Table 5 |
+- **캨 1개의 및으는 대애합(0.4–0.5ms)**인데 **정확도 이긷은 캨이 가로도록다**(+2.2 → +0.1). 이가 **"상위 캨을 거소 매도록 속도를 못 건 다"**는 구조적 사실이고, 따러로 RT-DETR은 5캨/6캨 사이들에서 손실가 0.1 AP에 그친다.

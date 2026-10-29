@@ -1,0 +1,89 @@
+---
+layout: default
+title: "Day 12 CLIP — 05 · 보충: 실전·배포 가이드 — CLIP을 실제로 돌리는 경로"
+paper_id: clip
+date: 2026-10-23
+---
+
+# 05 · 보충: 실전·배포 가이드 — CLIP을 실제로 돌리는 경로
+
+> 스크립트 예시·설치 커맨드는 **공식 저장소 README 수치/문구**만 사용(`src/README.md` = `openai/CLIP` README 원문). 논문 수치는 `00_검증팩트시트.md` 셀만 인용.
+
+## 1. 경로 ① — 공식 저장소 (`openai/CLIP`, 가중치 공식 배포)
+
+OpenAI가 가중치를 공식 서버에서 직접 배포하는 유일 경로다(도커·pip 래퍼·HuggingFace 변환본은 서드파티 — 이 시트 범위 밖).
+
+```bash
+# README 설치 블록 (CUDA 환경 기준)
+$ conda install --yes -c pytorch pytorch=1.7.1 torchvision cudatoolkit=11.0
+$ pip install ftfy regex tqdm
+$ pip install git+https://github.com/openai/CLIP.git
+```
+
+- 라이선스: **MIT** (Copyright (c) 2021 OpenAI — repo LICENSE 원문 확인).
+- 가중치는 `clip.load(name)`가 **필요 시 자동 다운로드** — 수동 다운로드 절차 없음.
+- README 사용 예(`ViT-B/32`, 이미지 `CLIP.png`, 텍스트 `["a diagram", "a dog", "a cat"]`)의 출력 `[[0.9927937, 0.00421068, 0.00299572]]`는 **샘플 관측치**다 — 벤치마크 수치가 아니므로 재현 불가 시 이상 아님.
+
+## 2. API 최소 흐름 (README 문구 기준)
+
+```python
+import torch, clip
+from PIL import Image
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model, preprocess = clip.load("ViT-B/32", device=device)   # 가중치 자동 다운로드
+
+image = preprocess(Image.open("sample.png")).unsqueeze(0).to(device)
+text = clip.tokenize(["a diagram", "a dog", "a cat"]).to(device)  # context_length=77 기본
+
+with torch.no_grad():
+    image_features = model.encode_image(image)   # [1, 임베딩 차원]
+    text_features  = model.encode_text(text)     # [3, 임베딩 차원]
+    logits_per_image, logits_per_text = model(image, text)   # pseudocode의 logits
+    probs = logits_per_image.softmax(dim=-1).cpu().numpy()
+```
+
+| API | 용도 | 대응 pseudocode |
+|---|---|---|
+| `clip.available_models()` | 배포 모델 이름 목록 | — |
+| `clip.load(name, device, jit=False)` | 모델 + torchvision transform 반환 | `image_encoder`/`text_encoder`/`W_i`/`W_t` 일체 |
+| `clip.tokenize(..., context_length=77)` | BPE 76 + `[SOS]`/`[EOS]` (본문 "max sequence length was capped at 76") | `T[n, l]` |
+| `model.encode_image / encode_text` | 각 모달리티 임베딩 | `I_e`, `T_e` |
+| `model(image, text)` | 유사도 logits 쌍 | `logits = np.dot(I_e, T_e.T) * np.exp(t)` |
+
+## 3. 모델 선택 논문 표기 (download 시 항상 라벨 병기)
+
+| 모델 | 논문 context |
+|---|---|
+| RN50 · RN101 · RN50x4 · RN50x16 · RN50x64 | EfficientNet식 연산 배율(≈4×/16×/64×) |
+| ViT-B/32 · ViT-B/16 · ViT-L/14 | ViT 스케일 계열 |
+| **ViT-L/14@336px** | FixRes식 1 에폭 추가 사전학습; **논문 기본 "CLIP"** ("Unless otherwise specified...") |
+
+- 모델별 ImageNet zero-shot 상세 수치(ViT-B/32 = 66.7% 등)는 **논문 본문·표에 없음** — 인용 시 레포 모델카드/릴리즈 문서를 "README 수치" 라벨로 확인할 것(팩트시트 §1.6-2).
+
+## 4. Zero-shot 분류 파이프라인 실전 지침 (§3.1.1 순서 그대로)
+
+1. 클래스 목록을 프롬프트로 감싸기 — 기본 `"A photo of a {label}."` (단독 ImageNet **+1.3%**).
+2. 카테고리 지시형 프롬프트: Pets `"a type of pet"` / Food101 `"a type of food"` / FGVC Aircraft `"a type of aircraft"` / OCR는 따옴표 / 위성 `"a satellite photo of a {label}."`.
+3. **앙상블은 임베딩 공간**에서: 80개 컨텍스트 프롬프트(+**3.5%**)의 임베딩을 **평균 후 캐시 1세트** — 확률 앙상블이 아니다("amortized" 동일 비용). 개수가 커져도 추론 비용 1회 인코딩.
+4. L2 정규화 → 코사인 유사도 × τ(`logit_scale`, 학습된 값) → softmax → argmax.
+5. 데이터 중복(§6) 대응: 학습 데이터와의 근사 중복 검출이 필요하면 논문 방식(증강 + fixed **τ=0.07 InfoNCE**)이 레퍼런스 — 직접 재현이 아니면 "논문 방식" 라벨로만 기술.
+
+### 체크리스트 (zero-shot 보고 형식)
+
+- [ ] 모델 이름(예: ViT-L/14@336px) + 프롬프트(기본 1개/앙상블 개수) 명시
+- [ ] "76.2%" 같은 표기는 **ViT-L/14@336px 전용** — 다른 모델 수치는 본문에 없음
+- [ ] README 수치와 논문 수치 혼용 금지 — 출처 라벨의 구분
+- [ ] BPE 어휘 크기: 본문 "49,152" ↔ 부록 표 "49,408" 불일치 알리고 **49,408(부록 표·코드 일치)**로 통일
+- [ ] 63M 파라미터는 **텍스트 인코더만** — 전체 모델 파라미터로 표기 금지
+- [ ] WIT "400 million" 정확 문구 — "401M" 등 라운드 표기 금지
+- [ ] GFLOPs·FPS·추론 시간은 **논문에 절대 수치 없음**(V100 GPU × 일수만 기재) — 서드파티 수치는 별도 출처 라벨
+
+## 5. 오늘 실습(03_실습)과의 연결
+
+| 실습 검증 | 배포 실전 함정 |
+|---|---|
+| V2 τ 클립 ×100 | `logit_scale`이 배치 학습 없이 무한히 상승하면 클립 구간 = 정보 없는 이동(항등식) — 학습 재현 시 클립 구현 누락이 오해 원인 |
+| V3 임베딩 앙상블 상각 | 확률 앙상블을 구현하면 추론 비용이 K배 — 캐시 1세트(임베딩 평균)로 상각 |
+| V4 1/K 분산 감소 | 프롬프트 K개를 평균하면 방향 노이즈가 1/K로 감소 — "같은 클래스라도 문장 다양성"이 곧 분류기 가중치 품질 |
+| V1 대칭 CE(축 2개) | 두 인코더 모두 업데이트하는 이유 — 한국쌍 방향 검색이 두 가지 모두 성립해야 대칭 손실이는 의미 |

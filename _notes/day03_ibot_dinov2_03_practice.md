@@ -1,0 +1,138 @@
+---
+layout: default
+title: "Day 03 iBOT & DINOv2 — 03. 실습 — iBOT 축소판 직접 구현·학습 (온라인 토크나이저 자기증류)"
+paper_id: ibot-dinov2
+date: 2026-10-18
+---
+
+# 03. 실습 — iBOT 축소판 직접 구현·학습 (온라인 토크나이저 자기증류)
+
+> 목표: **iBOT의 핵심 아이디어**(student는 가린 뷰, teacher=EMA는 원본 뷰 → 가린 패치를 teacher의 **soft 토큰분포**에 CE로 맞춤)를 최소 코드로 구현해, 손실이 **실제로 감소**함을 확인한다.
+> Day 02의 `simmim_demo.py`(픽셀 ℓ1 회귀)와 **정확히 어디가 다른지**를 코드로 체감하는 것이 목적.
+
+---
+
+## 0. 환경 / 실행
+
+```bash
+# 인터프리터: /opt/homebrew/bin/python3.14 (torch 2.14.0, MPS)
+cd /Users/robotjang/paper-diary
+/opt/homebrew/bin/python3.14 day03_ibot_dinov2/ibot_demo.py --steps 200 --device mps
+```
+
+- **자기완결적 합성 데이터**(3채널 32×32, 무작위 사각형) — 다운로드 불필요, 즉시 실행.
+- 산출물: `day03_ibot_dinov2/runs/{ibot_demo.pt, ibot_loss_curve.png}`.
+- 옵션: `--mask-ratio`(기본 0.4) · `--mask-patch`(기본 2, 블록) · `--n-proto`(64, 온라인 단어장) · `--ema`(0.996) · `--tau-t/--tau-s` · `--steps` · `--batch` · `--lr` · `--device`.
+
+---
+
+## 1. 실측 결과 (2026-10-18, Apple MPS)
+
+```
+[iBOT] device=mps steps=200 batch=32 mask_ratio=0.4 mask_patch=2 grid=8x8 n_proto=64 ema=0.996
+  step    1  L_CLS=6.4609  L_MIM=12.7002  total=19.1611
+  step   20  L_CLS=4.3487  L_MIM=4.2763   total=8.6250
+  step   40  L_CLS=4.0383  L_MIM=3.3896   total=7.4279
+  step  100  L_CLS=3.7201  L_MIM=2.9894   total=6.7095
+  step  200  L_CLS=3.5123  L_MIM=2.6177   total=6.1300
+[결과] 초기 L_CLS≈6.1471 L_MIM≈10.6403 → 최종 L_CLS≈3.4508 L_MIM≈2.6370   (총 10.9s)
+```
+
+**해석:**
+- **L_MIM** 이 **10.64 → 2.64** 로 약 **4.0×** 감소 → 가린 패치를 teacher의 soft 분포에 성공적으로 맞추기 시작.
+- **L_CLS** 도 **6.15 → 3.45** 로 감소 → 두 뷰의 전역 표현이 일관돼감(자기증류 성립).
+- 완전 수렴(0)은 아니지만, **외부 토크나이저(DALL-E dVAE) 없이** "정답지"가 스스로 만들어지는 과정이 관찰됨. `runs/ibot_loss_curve.png` 참조.
+
+---
+
+## 2. 코드에서 확인할 3가지 (SimMIM/저장 대비)
+
+| # | iBOT 코드 | 대응 (SimMIM 데모) | 의미 |
+|---|---|---|---|
+| ① | `t = soft_target(teacher_patch, τ_t)` → **soft 분포 타깃** | `target = 원시 픽셀` (ℓ1) | 정답이 **픽셀 벡터**가 아니라 **확률분포** |
+| ② | teacher = `copy.deepcopy(student)` + **EMA 갱신** | teacher 없음 | **온라인 토크나이저**(정답을 스스로 생성) |
+| ③ | `mim = -(t * log_softmax(s))` (**CE**) | `l1 = (pred-target).abs().mean()` | 손실이 **CE(분류)** vs **ℓ1(회귀)** |
+| ④ | `L = L_cls + L_mim` (전역+국소) | 단일 손실(ℓ1) | 자기증류가 **추가 목적함수**로 붙음 |
+
+핵심 한 줄:
+```python
+# iBOT: 정답은 '고정된 dVAE'가 아니라 '마스크 없는 뷰를 본 EMA teacher'가 만든다
+t = soft_target(teacher(u).patch, tau_t)          # online tokenizer
+loss_mim = -(t * log_softmax(student(mask(u)).patch / tau_s)).sum(-1)
+for ps, pt in zip(student.parameters(), teacher.parameters()):   # EMA, stop-grad
+    pt.mul_(m).add_(ps.detach(), alpha=1 - m)
+```
+
+---
+
+## 3. 실습 과제 (직접 실행해보세요)
+
+**과제 A — mask-ratio 스윕.** `--mask-ratio`를 `0.15 / 0.3 / 0.4 / 0.6 / 0.75`로 바꿔 최종 `L_MIM`을 기록하라.
+- 질문: iBOT 기본은 ~30%(BEiT 계열)인데, 여기 0.4와 비교해 `L_MIM`이 어떻게 달라지나? 비율이 너무 높으면?
+
+**과제 B — EMA momentum.** `--ema`를 `0.9 / 0.99 / 0.996 / 0.999`로 바꿔보라.
+- 질문: EM이 너무 작으면(빠르게 변하면) 왜 학습이 불안정(collapse)해질까? `stop_grad`는 왜 필수인가?
+
+**과제 C — temperature.** `--tau-t`(teacher)와 `--tau-s`(student)를 바꿔보라.
+- 질문: `τ_t`가 낮으면(sharpening 강) 정답이 뾰족해지는데, 너무 낮으면 뭐가 문제인가? `τ_t < τ_s`가 표준인 이유는?
+
+**과제 D (사고) — SimMIM → iBOT 변환.** 아래를 글로 설명하라.
+- SimMIM의 `target=원시픽셀`, `loss=ℓ1`을 **teacher의 soft 토큰분포**, **CE**로 교체.
+- teacher(EMA)를 추가하고, `L[CLS]` 자기증류를 더한다.
+- 즉 iBOT = "SimMIM의 **픽셀 타깃**을 **온라인 teacher의 soft 타깃**으로 바꾸고, **토크나이저를 자기 자신에서 만들어낸 것**".
+
+**과제 E (선택) — prototype 수.** `--n-proto`를 `16 / 64 / 256`으로 비교하라.
+- 질문: BEiT의 코드북 8192와 달리 iBOT는 teacher가 만든 연속 분포 → prototype 수가 성능에 어떤 영향?
+
+---
+
+## 4. 체크리스트
+
+- [ ] 데모가 **에러 없이** 실행되고 `L_MIM`이 감소했다.
+- [ ] teacher가 **EMA + stop_grad**로 갱신됨을 코드에서 확인했다(`update_teacher`/EMA 루프).
+- [ ] 타깃이 **hard argmax가 아니라 soft 분포**임을 확인했다(`soft_target`).
+- [ ] 손실이 **CE**이며 **가린 패치에서만** 계산됨을 확인했다(`mim()` 의 `m`).
+- [ ] 과제 A/B 중 최소 1개를 실행하고 결과를 기록했다.
+- [ ] iBOT와 BEiT의 차이를 **"온라인 vs 오프라인 토크나이저, soft vs hard 타깃"**으로 한 문장에 설명할 수 있다.
+
+---
+
+## 5. 참고: DINOv2는 왜 이 데모에서 재현하지 않나
+
+DINOv2는 **DINO + iBOT + KoLeo + Sinkhorn-Knopp + multi-crop + 대규모 데이터(LVD-142M) + 1B 파라미터 증류**가 합쳐진 스케일 실험이라 합성 데이터로 재현이 무의미하다. 이 실습은 **iBOT의 온라인 토크나이저 골격**(student-masked vs teacher-unmasked, soft 타깃, EMA)을 체득하고, DINOv2는 **개념(융합 + 데이터 큐레이션)**으로만 연결한다. DINOv2의 개별 요소(KoLeo, Sinkhorn)는 `02_수식유도.md`·`04_비교표.md`에서 확인.
+
+---
+
+## 6. 2단계 대조 실습 — BEiT식 오프라인 토크나이저 (`beit_2stage_demo.py`)
+
+> iBOT 데모(1단계·온라인·soft)와 **정확히 대조**되는 **2단계·오프라인·hard** 파이프라인.
+> ① VQ-VAE(dVAE-lite) 토크나이저 **학습 → 동결** ② 동결 토크나이저가 만든 **hard 토큰 ID**를 가린 패치에서 **CE 분류**.
+
+```bash
+/opt/homebrew/bin/python3.14 day03_ibot_dinov2/beit_2stage_demo.py --stage1-steps 300 --stage2-steps 300 --device mps
+```
+
+**실측 (2026-10-18, Apple MPS, 총 13.1s):**
+```
+Stage 1(토크나이저): recon 0.05323 → 0.00893  (codebook used 57/64, perplexity 19.5)
+Stage 2(MIM, hard CE): CE 4.3625 → 2.8224   acc 1.3% → 31.1%
+```
+
+**해석:**
+- **Stage 1:** recon(MSE) 0.053→0.009, 코드북 64개 중 **57개 사용**, perplexity ≈19.5 → 붕괴 없이 **이산 코드북** 형성.
+  - ⚠️ **코드북 붕괴(codebook collapse)를 실제로 겪음**: 정규화·사용균등화(엔트로피 항) 없이는 64개가 **1개로 붕괴** → MIM acc 100%의 *가짜 성공*. → **dVAE 학습은 공짜가 아니다.**
+- **Stage 2:** CE 4.36→2.82, 가린 토큰 정확도 **1.3%→31.1%** (64코드 random ≈ **1.56%**). 31% ≫ 1.56% → **학습은 되지만 정체**. **동결된 hard 토큰**을 맞히는 건 어렵다.
+- 이 정체가 **"왜 iBOT(온라인·soft)로 가는가"** 의 실증: hard one-hot 타깃은 모호한 패치에서 **라벨 노이즈**가 되고, **동결 토크나이저**는 도메인·품질에 고정된다.
+
+**1단계 vs 2단계 대조**
+
+| | **BEiT식 2단계** (`beit_2stage_demo.py`) | **iBOT 1단계** (`ibot_demo.py`) |
+|---|---|---|
+| 토크나이저 | VQ-VAE, **미리 학습 후 동결** | **EMA teacher**, 계속 진화 |
+| 타깃 | **hard** 토큰 ID(argmax) | **soft** 확률분포 |
+| 손실 | **CE**(K-code 분류) | CE(soft) + `L[CLS]` |
+| 단계 | **2**(토크나이저→동결→MIM) | **1** |
+| 결과 신호 | CE 4.36→2.82, acc 31%(정체) | L_MIM 10.64→2.64 (**4×↓**) |
+| 미분 | 양자화 **비미분** → 분리 불가피 | soft → **미분 가능** |
+
+**한 줄:** 2단계는 **동결된 hard 토큰** 위 분류라 정체, 1단계는 **진화하는 soft 분포** 위 증류라 매끄럽다 — **이게 iBOT가 BEiT의 2단계를 대체한 이유.**

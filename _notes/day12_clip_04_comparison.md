@@ -1,0 +1,112 @@
+---
+layout: default
+title: "Day 12 CLIP — 04 · 비교표 — CLIP 검증 수치 총정리"
+paper_id: clip
+date: 2026-10-23
+---
+
+# 04 · 비교표 — CLIP 검증 수치 총정리
+
+> 모든 수치는 `00_검증팩트시트.md`의 검증 셀만 사용. [조건] 표기는 *"*이 표가 그 숫자를 말하는 문맥"*(스플릿 · 백본 · 프롬프트 · GPU·일수)이다.
+
+## 1. CLIP Table 1 — Visual N-Grams과의 zero-shot 대결 (§3.1.1)
+
+| 모델 | aYahoo | ImageNet | SUN |
+|---|---|---|---|
+| Visual N-Grams | 72.4 | 11.5 | 23.0 |
+| **CLIP** | **98.4** | **76.2** | **58.5** |
+
+- [조건] zero-shot top-1; CLIP은 프롬프트 *"A photo of a {label}."* 대신 데이터셋별 최적 프롬프트가 아닌 **공통 템플릿** 시대의 기본 표기.
+- ImageNet **76.2%**는 dust: Visual N-Grams 11.5% 대비 **76.2로 11.5 → 76.2**, top-5 **95%** — "matches the performance of the original ResNet-50"(1.28M 라벨 미사용).
+- SUN: "*more than doubles*" (23.0 → 58.5), aYahoo: 오류 **95% 감소**.
+
+## 2. Zero-shot vs few-shot 같은 피처 공간 (§3.1.2)
+
+| 비교 | 값 |
+|---|---|
+| zero-shot CLIP vs 4-shot 로지스틱 회귀(같은 피처 공간) | 평균 성능 동등 |
+| zero-shot vs **16-shot BiT-M ResNet-152x2**(ImageNet-21K 학습) | "roughly matches" |
+| 27 데이터셋 vs "RN50 특성 + fully supervised 로지스틱 회귀" | **16/27 승**(ImageNet 포함) |
+| STL10 | **99.3%**(zero-shot, "appears to be a new state of the art") |
+| Stanford Cars / Food101 | +20%p↑ |
+| Flowers102 / FGVCAircraft | −10%p↓ |
+| Kinetics700 (full-frame) / UCF101 | +14.5% / +7.7%(RN50 대비) |
+| 약점 | EuroSAT · RESISC45 · PatchCamelyon · CLEVRCounts · GTSRB · KITTI Distance |
+
+## 3. 프롬프트 엔지니어링·앙상블 (§3.1.1)
+
+| 개선 | 값 | 비고 |
+|---|---|---|
+| 템플릿 "A photo of a {label}." 단독 | **ImageNet +1.3%** | 36 데이터셋 기준선 vs 시작 |
+| 80개 컨텍스트 프롬프트 앙상블 | **+3.5%** | 임베딩 공간 평균, 캐시 1세트 — 추론 비용 동일 |
+| 합계 | **~+5%** | 36 데이터셋 평균; "*similar to the gain from using 4 times more compute, but is 'free'*" |
+
+## 4. 표현 학습 — 선형 probe 스위트 (§3.2)
+
+| 항목 | 값 |
+|---|---|
+| 평가 방식 | 인코더 고정 + 선형 분류기만 학습 |
+| 평가 규모 | **66 models × 27 datasets = 1,782 evaluations** |
+| 스위트 | Kornblith 12 + 확장 — MNIST · FER2013 · STL-10 · EuroSAT · NWPU-RESISC45 · GTSRB · KITTI · PatchCamelyon · UCF101 · Kinetics700 · CLEVRCounts · Hateful Memes · ImageNet-1k + 신규 **Country211**(211국가 × 200/100) · **Rendered SST2**(448×448) |
+| 최고 | **ViT-L/14@336px** — 12 데이터셋 기존 최고 대비 **+2.6%**, 확장 27 스위트 **+5%** |
+| 대결 | **21/27 데이터셋에서 CLIP 피처 > Noisy Student EfficientNet-L2 피처** |
+| 효율 | **ViT가 CLIP ResNet보다 약 3× 연산 효율** |
+
+> [주의] "12 데이터셋"과 "27 데이터셋"은 **다른 스위트** — 표기 혼용 금지.
+
+## 5. Robustness — 자연 분포 이동 (§3.3, 부록 표)
+
+| 모델 | IN | IN-V2 | IN-A | IN-R | ObjectNet | IN-Sketch | IN-Vid PM0/PM10 | YTBB PM0/PM10 |
+|---|---|---|---|---|---|---|---|---|
+| **Zero-Shot CLIP** | 76.2 | 70.1 | 77.2 | **88.9** | 72.3 | 60.2 | 95.3/89.2 | 95.2/88.5 |
+| NS EfficientNet-L2 | **88.3** | **80.2** | **84.9** | 74.7 | **68.5** | **47.6** | 88.0/82.1 | 67.7/63.5 |
+| FixResNeXt101-32x48d V2 | 86.4 | 78.0 | 68.4 | 80.0 | 57.8 | 59.1 | 85.8/72.2 | 68.9/57.7 |
+
+- zero-shot CLIP은 **effective robustness** 예측선 위에 놓임 — "gap을 최대 75% 축소"(Fig. robust_main_fig 캡션).
+- ImageNet 지도 적응(+9.2%)은 robustness 무개선: ImageNet-R **−4.7** / ObjectNet **−3.8** / Sketch **−2.8** / ImageNet-A **−1.9**(Fig. robustness_interventions 캡션 + 본문).
+- 데이터별 커스텀 zero-shot 분류기 교체: 평균 effective robustness **+5%**, ObjectNet **+2.3%**.
+
+## 6. 데이터 중복 분석 (§6)
+
+| 항목 | 값 |
+|---|---|
+| 판정 | 35 데이터셋 중 **5개**만 99.5% Clopper-Pearson CI로 유의 |
+| 놀라움 | 그중 **2개는 중복 데이터에서 오히려 성능 하락** |
+| 최대 추정 증가 | **+0.6% Birdsnap** |
+| 방법 | 증강 파이프라인 + **fixed τ=0.07 InfoNCE**(유사도 학습만) |
+
+## 7. 스케일·데이터·비용 (§2.1 + §4 + 부록 하이퍼파라 표)
+
+| 항목 | 값 |
+|---|---|
+| 데이터 | **WIT = 400M (image, text) pairs**, 500k 쿼리, 쿼리당 ≤20,000 페어 |
+| 단어 규모 | GPT-2 WebText와 "similar total word count" |
+| 배치 / 에폭 | **32,768 / 32 epochs** |
+| τ | 학습(log-parameterized), 초기 Wu 2018 0.07 환산치, **logit 스케일 ×100 클립**(부록: Maximum temperature 100.0) |
+| 텍스트 인코더 | **63M / 12층 / 폭 512 / 8 heads**; BPE · max 76+[SOS]/[EOS] · [EOS] 위치 표현 |
+| 학습 비용 | **RN50x64 = 592 V100 × 18일** / 최대 ViT = **256 V100 × 12일** |
+| 이미지 통과 | 학습 내 **12.8B passes**(32 epochs × 400M) — "1장/초면 **405년**" |
+| 모델 8종 spanning | RN50 · RN101 · RN50x4 · RN50x16 · RN50x64 · ViT-B/32 · ViT-B/16 · ViT-L/14 (+**ViT-L/14@336px 1 에폭**) — **기본 "CLIP" = ViT-L/14@336px** |
+| Scaling 경향 | **44× compute**(5 모델 · 39 evals · 36 datasets) **log-log linear** |
+| SOTA 도달 비용 | zero-shot이 전체적 SOTA에 **~1000× compute** 필요 추정(§7) |
+
+## 8. 데모 실측 요약 — `clip_demo.py` V1~V4 (합성 세계, seed 42)
+
+| 검증 | 핵심 실측 | PASS 근거 |
+|---|---|---|
+| V1 대칭 CE | aligned [1.995, 1.204, 0.037, 0, 0] vs random [..., 307.33](τ 0.5→7.0) · 분해 항등식 exact · 대각 행 최대 | 항등식 + 구조 |
+| V2 τ 클립 ×100 | clip identity exact · 랭킹 불변 · maxprob [0.049→1.0] 단조 | 항등식 + 정리 |
+| V3 임베딩 앙상블 | σ=0 동치 exact · 인코딩 비용 1:8 · agreement [1.0, 0.78, 0.50, 0.28] 비증가 | 항등식 + 구조 |
+| V4 프롬프트 평균 | ratio 0.1198 vs 1/8=0.125 · 검색 정확도 0.7656 > 0.7031 | 통계 보장 + 방향 |
+
+> 최종 PASS 4/4 — 세부는 `03_실습.md`.
+
+## 9. GLIP/SAM(D10)과의 구조 대응 — 직접 비교 ❌, 구조 대응 ◯
+
+| 관점 | CLIP | GLIP | SAM |
+|---|---|---|---|
+| 인터페이스 | 텍스트 프롬프트 = **전체 분류기 가중치**(하이퍼네트워크) | 텍스트 프롬프트 = **토큰 피처**(로짓 스왑) | 포인트/박스 프롬프트 = **마스크 디코더 입력** |
+| 목표 구조 | N×N 배치 대칭 CE | 리전×토큰 정렬 (focal/binary) | 총 20:1 IoU 세그먼트/회귀 손실 |
+| 사전학습 데이터 | WIT 400M 캡션형 쌍 | O365+GoldG+caps 등 27M grounding 쌍 | SA-1B 1.1B 마스크 |
+| 제로샷 세계 | 분류(27 suite) + OCR/geo/행동(선형 probe) | 검출(LVIS) + ODinW | 분할(다중점·박스) |
+| 서로 조인 없음 | — 사전학습 신호·목표·데이터 모두 다르므로 **표 수치 직접 비교 금지** | | |

@@ -1,0 +1,128 @@
+---
+layout: default
+title: "Day 01 MAE — 04. 심화 비교표 — MAE vs BEiT vs SimMIM vs iBOT vs DINOv2"
+paper_id: mae
+date: 2026-10-15
+---
+
+# 04. 심화 비교표 — MAE vs BEiT vs SimMIM vs iBOT vs DINOv2
+
+> 모두 "마스킹 기반 자기지도(MIM)" 계열. 무엇을/어떻게 예측하는지가 갈림길.
+
+---
+
+## 1. 한 장 요약표
+
+| | **MAE** | **BEiT** | **SimMIM** | **iBOT** | **DINOv2** |
+|---|---|---|---|---|---|
+| 발표 | CVPR 2022 | ICLR 2022 | CVPR 2022 | ICLR 2022 | TMLR 2024 |
+| 소속 | FAIR | MSRA | MSRA | ByteDance | Meta |
+| 예측 **타깃** | 원본 **픽셀** | **dVAE 토큰**(이산) | 원본 **픽셀** | **teacher 출력**(온라인) | DINO + iBOT (결합) |
+| 타깃 생성 | 불필요 | 사전학습 dVAE 필요 | 불필요 | EMA teacher | EMA teacher |
+| 손실 | MSE (회귀) | CE (분류) | L1/MSE (회귀) | CE (self-distill) | DINO CE + iBOT CE |
+| 마스킹 비율 | **75%** | ~40% | ~60% | MIM헤드 ~30% | ~20~40% |
+| 인코더 | ViT | ViT | **Swin** 등 계층형 | ViT | ViT |
+| 디코더 | **비대칭·가벼움·폐기** | 있음 | **경량 헤드** | 없음(헤드) | 헤드들 |
+| 토크나이저 | 없음 | 있음(dVAE) | 없음 | 온라인 | 온라인 |
+| 대조학습 | ❌ | ❌ | ❌ | ✅ (DINO) | ✅ (DINO) |
+
+---
+
+## 2. 계보와 관계
+
+```
+BERT (NLP)
+ │
+ ├─ BEiT ── dVAE 토큰 예측 (이산) ──┐
+ │                                  │
+ └─ MAE ─── 픽셀 직접 복원 (연속) ──┤   ← reconstruction 계열
+                                    │
+      SimMIM ─ 단순화, 계층형(Swin) ┘
+                                    
+DINO (self-distill, 대조) ──┐
+                            ├─ iBOT ── (DINO + MIM) ── DINOv2 ── (SOTA 표현)
+      MAE (masking) ────────┘                    ← reconstruction+contrastive 융합
+```
+
+- **BEiT → MAE**: 타깃을 "이산 토큰"에서 "원시 픽셀"로 바꾸며 **토크나이저 제거** = 단순화.
+- **MAE ↔ SimMIM**: 둘 다 픽셀 복원. 차이는 아키텍처(순수 ViT vs Swin)와 마스킹 비율·디코더.
+- **iBOT → DINOv2**: MIM에 **대조학습(self-distillation)**을 결합.
+
+---
+
+## 3. What / How 축으로 분류
+
+Hondru et al., *MIM: A Survey* (IJCV 2025)의 두 축:
+
+**① 무엇을 예측하나 (target)**
+- 픽셀: MAE, SimMIM
+- 이산 토큰: BEiT
+- 특징/확률분포(온라인): iBOT, DINOv2
+
+**② 어떻게 만드나 (접근)**
+- **Reconstruction**: MAE, BEiT, SimMIM
+- **Contrastive**: DINOv2(iBOT 부분), SdAE
+
+---
+
+## 4. 각 방법의 핵심 아이디어 & 장단점
+
+### MAE
+- **핵심:** 비대칭 인코더-디코더 + 75% 마스킹 + 픽셀 MSE.
+- **장점:** 가장 단순, 토크나이저 불필요, 학습 3배+ 빠름, 잘 스케일.
+- **단점:** 픽셀 타깃이 저수준 → **선형 프로빙**은 DINO류보다 약함(작은 스케일에서 특히).
+
+### BEiT
+- **핵심:** 이미지를 dVAE로 이산 토큰화 → 토큰 ID를 분류(CE).
+- **장점:** 의미론적(semantic) 타깃 → 표현이 의미 지향적.
+- **단점:** **사전학습된 dVAE 토크나이저 필요**(복잡·추가 비용), 이산 타깃 학습 불안정.
+
+### SimMIM
+- **핵심:** 픽셀 회귀를 단순하게, **계층형 백본(Swin)**에도 적용. 경량 예측 헤드.
+- **장점:** 구현 단순, Swin/Conv 계열에 바로 적용.
+- **단점:** 마스킹 비율이 낮아(~60%) MAE보다 표현력 이득이 작을 수 있음.
+
+### iBOT
+- **핵심:** **온라인 토크나이저** — 학습 중인 teacher(EMA)의 출력(softmax 분포)을 타깃으로. DINO(전역) + MIM(패치) 결합.
+- **장점:** 자기완결적 의미 타깃, 강한 표현.
+- **단점:** teacher-student 구조로 복잡, 하이퍼파라미터 민감.
+
+### DINOv2
+- **핵심:** DINO loss + iBOT loss + **LVD-142M 자동 큐레이션 데이터** + distillation. 라벨 없음.
+- **장점:** **범용 표현 SOTA**, 선형 프로빙/탐지/분할 강력, cross-modal 안정.
+- **단점:** 레시피가 무겁고(데이터 큐레이션·학습 트릭), MAE보다 복잡·비쌈.
+
+---
+
+## 5. "MAE가 BEiT보다 단순한데 왜 성능이 좋았나?"
+
+| 관점 | BEiT | MAE |
+|---|---|---|
+| 타깃 | dVAE 이산 토큰 | 원시 픽셀 |
+| 추가 모델 | 토크나이저 필요 | 없음 |
+| 손실 | CE | MSE |
+| 마스킹 | ~40% | **75%** |
+| 디코더 | 표준 | **비대칭·경량** |
+| 병목 | 토크나이저 품질 의존 | 없음 |
+
+- MAE는 **토크나이저 없이** 픽셀만 복원 → 파이프라인이 단순하고 스케일이 쉽다.
+- **매우 높은 마스킹(75%)** + **비대칭 구조**가 결합되어, 저수준 타깃임에도 고수준 표현을 강제.
+- 반대로 선형 프로빙(적은 데이터, 적은 스케일)에서는 BEiT/iBOT/DINOv2의 의미 타깃이 유리할 수 있음 → 이후 **DINOv2가 둘을 융합**한 이유.
+
+---
+
+## 6. 의사결정 가이드
+
+| 상황 | 추천 |
+|---|---|
+| 빠르게 스케일 큰 사전학습, 파이프라인 단순 | **MAE** |
+| 계층형(Swin/Conv) 백본 | **SimMIM** |
+| 이산 토큰 기반 표현 | **BEiT** |
+| 최고 품질의 **범용 시각 특징** (탐지/분할/검색) | **DINOv2** |
+| 자기완결 의미 타깃(토크나이저 없이) | **iBOT** |
+
+---
+
+## 7. 더 읽기
+- Hondru et al., *Masked Image Modeling: A Survey*, IJCV 2025 — arXiv:2408.06687 ([GitHub](https://github.com/vladhondru25/MIM-Survey))
+- 원논문: MAE 2111.06377 / BEiT 2106.08254 / SimMIM 2111.09886 / iBOT 2111.07832 / DINOv2 2304.07193

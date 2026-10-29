@@ -1,0 +1,169 @@
+---
+layout: default
+title: "Day 07 DETR — 06 · 보충: 쿼리 선택(Query Selection) — DETR의 학습된 슬롯부터 RT-DETR의 uncertainty-minimal까지"
+paper_id: detr
+date: 2026-10-20
+---
+
+# 06 · 보충: 쿼리 선택(Query Selection) — DETR의 학습된 슬롯부터 RT-DETR의 uncertainty-minimal까지
+
+> 대상: DETR §3.2(학습된 object query) · Fig 4·7 · 부록 Fig 12 · RT-DETR §2.2 · §4.3(식 2–3) · Fig 6 · Table 4
+> 코드 근거: `facebookresearch/detr`(`models/detr.py:39`, `models/transformer.py:52-58`) · `lyuwenyu/rt-detr` v1(`rtdetr_decoder.py:488-509`, paddle `rtdetr_transformer.py:493-511`) · v2(`denoising.py`)
+> **한 문장 요약:** 쿼리는 "모델이 무엇을 물어볼 자리(슬롯)"이고, DETR은 이를 **고정된 학습 벡터**로 시작했고, RT-DETR은 **인코더가 뽑아준 실제 이미지 피처**로 바꿨으며, 그때 "뽑는 기준"을 분류 점수에서 **분류×위치 불확실성**으로 정교화했다.
+
+---
+
+## 1. DETR 원문 — 쿼리란 무엇인가
+
+### 1.1 정의 (§3.2)
+
+논문: *"Since the decoder is also permutation-invariant, the N input embeddings must be different to produce different results. These input embeddings are learnt positional encodings that we refer to as **object queries**, and similarly to the encoder, we add them to the input of each attention layer."*
+
+세 단위로 분해하면:
+
+1. **쿼리는 "위치 인코딩"이다.** 공간 pos enc(encoder)와 달리, 쿼리는 **학습되는 테이블**이다. 즉 DETR의 디코더 입력은 "이 자리는 사람이다/차이다" 같은 의미론이 아니라, **"이 슬롯은 이미지의 어떤 부분을 물어볼지"를 나타내는 100개의 학습된 256차원 벡터**다.
+2. **순열 불변성 때문에 필요하다.** 디코더가 순열에 무관하면, 입력 임베딩이 전부 같으면 출력도 전부 같다 → 아무것도 못 배운다. 서로 다른 100개 쿼리가 **서로 다른 역할**을-learn하도록 만드는 유일한 수단이다.
+3. **매 attention 층에 더한다.** `transformer.py:52-58`에서 `query_embed`가 디코더의 `query_pos`로 계속 전달되어 매 층 self-attention·cross-attention에 주입된다.
+
+```python
+# facebookresearch/detr/models/transformer.py:51-58
+pos_embed = pos_embed.flatten(2).permute(2, 0, 1)
+query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1)
+tgt = torch.zeros_like(query_embed)        # 디코더 입력은 0으로 시작
+memory = self.encoder(src, src_key_padding_mask=mask, pos=pos_embed)
+hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
+                  pos=pos_embed, query_pos=query_embed)
+```
+
+```python
+# facebookresearch/detr/models/detr.py:39
+self.query_embed = nn.Embedding(num_queries, hidden_dim)   # 100 x 256
+```
+
+- **`tgt = torch.zeros_like(query_embed)`** 라는 점이 중요하다. 디코더의 **내용(content) 입력은 전부 0**이고, 쿼리의 정체성은 오직 `query_pos`(=쿼리 embeding)로만 전달된다. 즉 DETR의 슬롯은 "빈 자리 + 이름표"다. **이 빈 자리를 채우는 게 이후 모든 후속 작업(DAB·DN·DINO·RT-DETR)의 주제**가 된다.
+
+### 1.2 쿼리는 어떻게 specialize 되는가 (Fig 7)
+
+- 20개 슬롯의 예측 박스를 COCO val 전체에 대해 시각화한 결과, **각 슬롯이 여러 운영 모드**(특정 지역·특정 크기)를 갖는다(green=작은 박스, red=가로로 긴 큰 박스, blue=세로로 긴 큰 박스).
+- 동시에 **모든 슬롯이 "화면 전체를 덮는 큰 박스" 모드**를 갖는다(중앙 정렬된 red 점). 논문은 이를 COCO의 객체 분포 탓으로 돌린다: *"all slots have the mode for predicting image-wide boxes … We hypothesize that this is related to the distribution of objects in COCO."*
+- **해석:** 슬롯은 "detector"가 아니라 **"이 장면에서 이런 종류/크기의 물체를 찾아봐라"라는 검색 지시**다. 하나의 슬롯이 여러 모드를 갖는다는 것은, 슬롯이 **하나의 객체가 아니라 하나의 '질의 주제'** 라는 뜻이다.
+- **OOD 일반화(Fig 5):** 학습 데이터에 기린은 한 장에 최대 13마리인데, 합성 이미지에서 **24마리**를 모두 찾았다. 논문 결론: *"This experiment confirms that there is no strong class-specialization in each object query."* → 슬롯이 특정 클래스에 묶이지 않는다.
+
+### 1.3 슬롯 수의 한계 (부록 Fig 12)
+
+- DETR는 N=100이므로 **최대 100개**까지만 객체 수를 표현할 수 있다.
+- 논문 실험: 같은 클래스의 정사각 타일 이미지를 10×10 격자에 반복 배치 → 50개까지는 **전부 검출**, 100개를 넣으면 **평균 30개만** 검출(50개를 전부 찾는 것보다 나쁘다).
+- 논문은 이 현상을 "이미지와 인스턴스 수 모두 학습 분포에서 벗어나는 OOD"로 해석하며, "the model does not overfit on these distributions since it yields near-perfect detections up to 50 objects"라고 결론짓는다. **즉 "슬롯 부족"을 인정하면서도 과적합 증거는 아니라고 방어하는 절충 서술**이다(비판적으로 읽을 여지 있음).
+- RT-DETR은 K=300으로 이 상한을 3배로 올렸다.
+
+---
+
+## 2. 왜 "쿼리 선택"이라는 이름이 붙었나 — 계보
+
+RT-DETR §2.2가 이 흐름을 정확히 정리한다: *"previous works (Zhu 2020; Yao 2021; Zhang 2022) propose query selection schemes to **replace the vanilla learnable embeddings with encoder features**"*
+
+| 단계 | 쿼리의 정체 | N | 대표 |
+|---|---|---|---|
+| DETR | **고정 학습 벡터** (nn.Embedding) | 100 | 2005.12872 |
+| Deformable DETR | **인코더 제안(proposal) 중 top-K** (2-stage) | 300 | 2010.04159 (10/20 변경으로 예비) |
+| Conditional DETR | 쿼리를 **cross-attention 조건**으로 사용하여 학습 난이도↓ | 300 | 2109.06152 |
+| DAB-DETR | 쿼리를 **anchor(기준 박스)** 로 — "4D query" | 300 | 2201.12329 (Day 09) |
+| DN-DETR | **GT를 변형한 denoising query**를 학습에 추가 | 100+ | 2203.01305 (Day 09) |
+| DINO | **혼합(mixed)**: content는 encoder feature, position은 anchor | 900 | 2203.03605 (Day 10) |
+| **RT-DETR** | **encoder feature top-K + uncertainty 최소화** | 300 | 2304.08069 (오늘) |
+
+- 공통된 문제 인식: DETR의 쿼리는 **"최적화하기 어렵다(hard-to-optimize)"**. RT-DETR §1: *"We observe that the current query selection directly adopt classification scores for selection, ignoring the fact that the detector are required to simultaneously model the category and location of objects, both of which determine the quality of the features."*
+- 즉 DETR의 슬롯 100개는 **"무엇을 볼지"를 이미지와 무관하게 고정**해 버린다. 실전에서는 "지금 이 장면에서 어디에 물건이 있는가" 정보를 **쿼리 초기화에 직접 주입**하는 게 낫다는 전환이 일어난다.
+
+---
+
+## 3. RT-DETR의 uncertainty-minimal query selection (§4.3)
+
+### 3.1 두 단계 파이프라인
+
+1. **하이브리드 인코더**가 3개 스케일의 피처를 낸다 → 이어 붙여 $(B, 8400, 256)$ ($6400+1600+400$, 640×640 입력 기준).
+2. 이 8400개 위치 중 **K=300**을 골라 **content query**(해당 위치의 인코더 피처)와 **position query**(그 위치에서 예측한 박스)를 디코더에 넘긴다.
+
+### 3.2 논문의 논지 — Eq (2), (3)
+
+$$\mathcal U(\hat{\mathcal X})=\big\|\mathcal P(\hat{\mathcal X})-\mathcal C(\hat{\mathcal X})\big\| \tag{R1-2}$$
+
+$$\mathcal L=\mathcal L_{\rm box}(\hat b,b)+\mathcal L_{\rm cls}\big(\mathcal U(\hat{\mathcal X}),\hat c,c\big) \tag{R1-3}$$
+
+- $\mathcal C$ = 분류 예측 분포, $\mathcal P$ = **위치 예측 분포**. 둘의 **불일치**가 "이 피처에 대한 확신이 얼마인가"의 대리표.
+- 논문은 이것을 **epistemic uncertainty**로 부른다: *"the feature uncertainty U is defined as the discrepancy between the predicted distributions of localization P and classification C"*, *"we explicitly constructs and optimizes the epistemic uncertainty to model the joint latent variable of encoder features"*.
+- **핵심 구분(학생이 반드시 구분할 것):**
+  - **선택(selection)**: 8400 중 300을 고르는 행위
+  - **최적화(objective)**: 그 300개가 "분류와 위치가 일치하는" 피처가 되도록 인코더를 학습시키는 손실
+  - 논문 §4.3은 **최적화 쪽**을 바꾼 것이고, Table 4는 그 결과 **선택된 피처의 품질이 좋아졌다**는 측정이다.
+
+### 3.3 Table 4 / Fig 6 — 정량 결과
+
+| 쿼리 선택 | AP | Prop cls ↑ | Prop both ↑ |
+|---|---|---|---|
+| Vanilla (분류 점수) | 47.9 | 0.35% | 0.30% |
+| Uncertainty-minimal | **48.7** (+0.8) | **0.82%** | **0.67%** |
+
+- `Prop cls` = 선택된 피처 중 분류 점수 > 0.5인 비율, `Prop both` = **분류·IoU 둘 다** > 0.5인 비율.
+- Fig 6 산점도: x=분류 점수, y=IoU 점수. **보라(uncertainty)가 우상단에 몰리고, 초록(vanilla)이 오른쪽 아래에 몰린다.** 밀도 곡선 차도 우상단에서 가장 크다.
+- 논문 문장: *"There are 138% more purple dots than green dots, i.e., more green dots with a classification score less than or equal to 0.5 … And there are 120% more purple dots than green dots with both scores greater than 0.5."*
+- **해석:** vanilla가 고른 피처는 "분류는 자신 있지만 IoU가 낮다"가 많다 → **위치가 어긋난 피처**. uncertainty 학습은 인코더가 **분류와 위치를 일관되게 예측**하도록 밀어, 선택되는 피처의 질을 함께 끌어올린다.
+
+### 3.4 실습 [D] 시뮬레이션과의 관계
+
+- 실습 [D]는 "분류 점수만으로 뽑으면 위치가 나쁜 피처가 섞이고, 분류×IoU로 뽑으면 '둘 다 확실한' 비율이 커진다"를 **합성 데이터로 재현**한 것 → 7.333% → 19.000% (2.59x). 원문 방향(0.30% → 0.67%, 2.2x)과 크기까지 비슷하다.
+- **한계 명시:** 실습은 **시뮬레이션**이고 원문은 COCO val 실측이다. 비율의 근거로는 인용 불가.
+
+---
+
+## 4. 코드 실체 — 논문 표현과 구현 표현의 차이
+
+### 4.1 v1 PyTorch (`rtdetr_pytorch/src/zoo/rtdetr/rtdetr_decoder.py:488-509`)
+
+```python
+enc_outputs_class = self.enc_score_head(output_memory)
+enc_outputs_coord_unact = self.enc_bbox_head(output_memory) + anchors
+_, topk_ind = torch.topk(enc_outputs_class.max(-1).values, self.num_queries, dim=1)
+reference_points_unact = enc_outputs_coord_unact.gather(dim=1, index=topk_ind...)
+enc_topk_bboxes = F.sigmoid(reference_points_unact)
+enc_topk_logits = enc_outputs_class.gather(dim=1, index=topk_ind...)
+target = output_memory.gather(dim=1, index=topk_ind...)
+```
+
+- **content query** = `target`(선택된 위치의 인코더 피처), **position query** = `reference_points_unact`(그 위치에서 예측한 박스). 2줄이 "쿼리"의 정체를 전부 설명한다.
+- **랭킹은 분류 점수 단독**이다. Paddle 구현도 동일하다(`rtdetr_transformer.py:496-497`: `paddle.topk(enc_outputs_class.max(-1), 300, axis=1)`).
+
+### 4.2 그래서 "uncertainty"는 어디에 있나
+
+- 공개 v1 코드에서 **랭킹 함수는 cls 점수**이고, uncertainty는 **학습 손실 쪽**(식 3)에만 존재한다.
+- 따라서 정확해야 할 서술은: **"RT-DETR은 선택 기준을 바꿨다"가 아니라, "선택되는 피처의 품질을 (분류·위치 불확실성 항을 손실에 넣어) 개선했다"** 이다. Table 4의 Prop cls/Prop both가 0.35%→0.82%, 0.30%→0.67%로 오른 것은 **그 학습 효과의 증거**다.
+- **학생 답변(Q5-b)에서의 안전 문장:**
+  > "논문은 uncertainty-minimal query selection을 두고, 선택 기준을 분류 점수에서 분류·위치의 공동 불확실성으로 확장한 것으로 서술한다(§4.3 식 2–3). 다만 공개 v1 구현의 top-K 연산은 분류 점수 단독이고(코드 `rtdetr_decoder.py:491`), uncertainty는 인코더 학습 손실에 반영되는 형태로 구현되어 있다. Table 4는 이 학습 효과로 선택된 피처의 품질(Prop cls 0.35%→0.82%, Prop both 0.30%→0.67%)이 개선됨을 보여준다."
+
+### 4.3 RT-DETRv2에서의 변화 (보충 자료 05와 연결)
+
+- v2는 **denoising query 100개**를 추가해 총 $(300+d)$개로 디코더에 넣는다. `denoising.py:11 get_contrastive_denoising_training_group`가 GT를 변형해 쿼리를 만들고, `dn_meta["dn_num_split"]`로 본 쿼리(300)와 denoising 쿼리(d)의 **손실을 분리**한다.
+- attention mask $(300+d, 300+d)$로 두 그룹이 서로를 보지 못하게 한다(보충 자료 Fig 4).
+- **의미:** v1이 "쿼리를 어디서 가져올지"(encoder feature)를 다뤘다면, v2는 "쿼리를 어떻게 더 잘 학습시킬지"(denoising)로 한 축 더 나아갔다. Day 09(DN-DETR)에서 정면으로 다룬다.
+
+---
+
+## 5. 정리 — 쿼리 선택 3세대
+
+| 세대 | 쿼리 정체 | 장점 | 남는 한계 |
+|---|---|---|---|
+| **1세대 (DETR)** | 고정 학습 벡터 100개 | 단순, NMS 불필요, 슬롯 전문화 | 최적화 어려움·수렴 느림, 슬롯 상한 100, 이미지와 무관한 고정 |
+| **2세대 (Deformable→DINO)** | 인코더 피처/anchor 기반 | 수렴 가속, 슬롯 상한 확대 | 위치 prior(anchor) 재도입, 앵커 튜닝 비용 |
+| **3세대 (RT-DETR)** | 인코더 피처 + **불확실성 최소화 학습** | 초기화 품질↑(+0.8 AP), 슬롯 300, 실시간 | AP_S 여전히 YOLO 열위, uncertainty의 "랭킹 vs 손실" 해석 혼동 |
+
+---
+
+## 6. 체크리스트 (답변·복습용)
+
+- [ ] 쿼리의 정의를 한 문장으로: "**모델이 이 장면에서 무엇을 물어볼 자리(slots)**"
+- [ ] DETR의 쿼리가 "고정 학습 벡터"이고 그 부재가 왜 순열 불변성과 충돌하는지
+- [ ] content query(인코더 피처)와 position query(예측 박스)의 분업
+- [ ] 8400 (=80²+40²+20²)이라는 후보 풀의 크기와 K=300의 의미
+- [ ] **selection(랭킹) ≠ objective(손실)** — RT-DETR이 바꾼 것은 손실 쪽이고, 공개 코드의 랭킹은 cls 점수
+- [ ] Fig 6 산점도의 두 축(분류 점수, IoU 점수)과 "우상단 집중" 의미
+- [ ] 슬롯 상한(100 → 300)과 OOD(기린 24 vs Fig 12)의 해석 차이

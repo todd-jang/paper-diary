@@ -1,0 +1,233 @@
+---
+layout: default
+title: "Day 03 iBOT & DINOv2 — 01. 코드 워크스루 — iBOT(온라인 토크나이저) / DINOv2 라인바이런 해설"
+paper_id: ibot-dinov2
+date: 2026-10-18
+---
+
+# 01. 코드 워크스루 — iBOT(온라인 토크나이저) / DINOv2 라인바이런 해설
+
+> 대상: iBOT 공식 구현 [`bytedance/ibot`](https://github.com/bytedance/ibot) · DINOv2 공식 구현 [`facebookresearch/dinov2`](https://github.com/facebookresearch/dinov2)
+> 두 코드를 **데이터 흐름** 기준으로 위→아래로 따라가며 "왜 이렇게 짰나"를 본다.
+> 관통 질문: **"BEiT의 오프라인 dVAE 토크나이저를, 왜·어떻게 없앴나?"**
+
+---
+
+## PART A. iBOT — 온라인 토크나이저
+
+### A.0 큰 그림
+
+```
+이미지 x
+  ├─ view u ──(augment)──► u ──(blockwise mask)──► ũ        ← student 입력(가림)
+  └─ view v ──(augment)──► v ──(blockwise mask)──► ṽ        ← student 입력(가림)
+
+[student]  ũ ─► f_s ─► h_s ─┬─► [CLS]_s
+                             └─► patch_s (가린 자리)
+[teacher]  u ─► f_t ─► h_t ─┬─► [CLS]_t ──┐                 ← teacher 는 "마스크 없는" 뷰
+                             └─► patch_t ──┤
+                                            │ stop-grad (EMA)
+   ┌───────────────────────────────────────┴───────────────────────┐
+   │ L_CLS = CE( [CLS]_s , [CLS]_t )        ← 뷰 간 전역 자기증류(DINO식)      │
+   │ L_MIM = CE( patch_s[가린곳] , softmax(patch_t) )  ← 가린 패치를              │
+   │          teacher 의 soft 토큰분포(=online tokenizer)에 맞춤      │
+   └────────────────────────────────────────────────────────────────┘
+        teacher 파라미터: θ_t ← λ·θ_t + (1−λ)·θ_s   (EMA)
+```
+
+**핵심:** teacher 네트워크(`f_t ∘ h_t^patch`)가 곧 **"온라인 토크나이저"** 다 — 마스크 없는 이미지를 보고 각 패치의 **토큰 확률분포**를 만들고, student 는 그 분포를 맞힌다.
+
+---
+
+### A.1 "온라인 토크나이저"가 뭔가 (BEiT와의 대비)
+
+BEiT는 **고정된 dVAE**(DALL-E, 코드북 8192)를 미리 학습해 `z_i ∈ [0,8192)` 라벨을 만들었다 → **2단계**, **하드 라벨**, **고정된 도메인**.
+
+iBOT는 이를 **student 의 EMA teacher**로 대체한다:
+
+```python
+# BEiT (오프라인)  :  z = dVAE.get_codebook_indices(x)      # 하드 토큰 ID, 미리 학습됨
+# iBOT  (온라인)   :  p_t = softmax( teacher(x).patch / τ_t )   # soft 분포, 같이 학습됨
+```
+
+| | BEiT | iBOT |
+|---|---|---|
+| 토크나이저 | **오프라인 dVAE**(미리 학습, 고정) | **온라인 teacher**(EMA, 계속 진화) |
+| 라벨 | **하드** 토큰 ID | **soft** 확률분포 |
+| 단계 | 2단계(토크나이저 → MIM) | **1단계**(동시) |
+| 도메인 | 사전학습 데이터에 고정 | **현재 데이터에 적응** |
+
+> **왜 soft 가 중요한가:** 한 이미지 패치는 **의미가 모호**하다(경계·배경). 하드 라벨 하나로 강제하면 오히려 노이즈. teacher 의 **분포**를 맞히면 모호함을 자연히 반영한다.
+
+---
+
+### A.2 두 손실 (L[CLS] + L_MIM)
+
+```python
+# 1) 전역(전역 의미) — 뷰 u,v 의 [CLS] 교차 자기증류, 대칭
+L_cls = 0.5 * ( ce(cls_s(v), cls_t(u)) + ce(cls_s(u), cls_t(v)) )
+
+# 2) 국소(패치 의미) — 가린 패치를 teacher 의 soft 분포로
+L_mim = 0.5 * ( mse_masked(patch_s(ũ), patch_t(u)) + mse_masked(patch_s(ṽ), patch_t(v)) )
+#           = - Σ_i  m_i · P_t^patch(u_i)^T log P_s^patch(ũ_i)     (CE 형태)
+
+loss = L_cls + L_mim
+```
+
+- **L[CLS]** = "전역 의미"를 부트스트랩(DINO식). `L_MIM` 이 의미 있는 타깃을 만들도록 **토크나이저의 품질을 떠받친다**.
+- **L_MIM** = "국소(패치) 의미"를 학습. 타깃은 teacher 의 **soft 확률분포**.
+- iBOT 논문은 **MIM = 지식증류(KD)** 로 정식화한 뒤, teacher 를 online 으로 바꾸면 KD 가 된다는 걸 보인다.
+
+### A.3 마스킹 + forward
+
+```python
+# blockwise masking (BEiT/Bao et al. 계열) — 인접 패치를 블록째 가림
+mask = random_blockwise_mask(grid=(14,14), ratio=0.3)   # iBOT 기본 ~30%
+# student 는 마스크 자리에 학습된 [MASK] 토큰을 넣고,
+z = patch_embed(x)
+z[mask] = mask_token
+z = torch.cat([cls_token, z], dim=1)
+feat = backbone(z)                       # ViT / Swin
+patch_logits = patch_head(feat[:, 1:])   # h_t^patch ∘ f_t  = online tokenizer
+cls_logits   = cls_head(feat[:, 0])
+```
+
+- **student 인코더는 마스크 토큰까지 통과**(BEiT/SimMIM과 같음).
+- iBOT 는 **Swin Transformer** 에도 적용 가능(계층형) — patch tokenizer 가 위치 구조를 보존하기 때문.
+- 타깃은 **teacher 의 마스크 없는 뷰 출력**에서 가져온다(같은 위치 패치).
+
+### A.4 EMA teacher 업데이트
+
+```python
+@torch.no_grad()
+def update_teacher(student, teacher, m=0.996):
+    for ps, pt in zip(student.parameters(), teacher.parameters()):
+        pt.mul_(m).add_(ps.detach(), alpha=1 - m)   # θ_t ← m·θ_t + (1−m)·θ_s
+
+# teacher 출력에는 항상 stop-grad → graph 를 student 로만 흘린다
+```
+
+- **stop-grad + EMA** 가 붕괴(collapse)를 막는다: teacher 는 "천천히 변하는 안정적 정답지".
+- 이 안정성이 없으면 student 가 스스로를 맞히는 **자기확증 붕괴**가 난다(DINO 계열 공통).
+
+### A.5 미세조정 / 결과
+
+```python
+# 사전학습 후: 두 head(patch/cls) 버리고, encoder 위에 task head 부착
+model = iBOT(pretrained=ckpt); model.head = nn.Linear(dim, num_classes)
+# ImageNet-1K: 82.3% linear probing / 87.8% fine-tuning (headline)
+```
+
+- **Dense 전이 강함**(detection/segmentation) — 패치 수준의 지역 의미를 배웠기 때문.
+- **corruption robustness** 우수.
+
+---
+
+## PART B. DINOv2 — DINO + iBOT + KoLeo + 데이터 큐레이션
+
+### B.0 큰 그림
+
+```
+student ← local + global crops (multi-crop)
+teacher ← global crops (EMA, stop-grad)
+
+목적함수 =  L_DINO          (전역 [CLS] 자기증류; SwAV Sinkhorn-centering)
+          + L_iBOT/MIM      (가린 패치 자기증류; 국소)
+          + λ·L_KoLeo       (배치 내 특징 분산 정규화; 검색)
+    + 고해상도 미세조정 단계(short high-res phase)
+```
+
+**DINOv2 = (DINO + iBOT) 를 합치고, SwAV centering·KoLeo 를 더해, LVD-142M 으로 스케일한 것.**
+
+### B.1 DINO 손실 + iBOT 손실 결합
+
+```python
+# DINO: 전역 [CLS] 증류 (teacher softmax + centering)
+L_dino = -(p_t * log p_s).sum(-1).mean()
+
+# iBOT: 가린 패치 증류 (국소) — 2 global crop 에 적용
+L_ibot = masked_patch_ce(patch_s, patch_t)      # iBOT 과 동일
+
+# head 공유: DINO head 와 iBOT head 의 파라미터를 '공유'하면 더 좋다(iBOT ablation)
+```
+
+- 논문: **"a combination of DINO and iBOT losses with the centering of SwAV"**.
+- 각 손실은 **역할이 다르다**: DINO = 전역 의미, iBOT = 패치 국소(→ 분할·dense).
+
+### B.2 KoLeo regularizer
+
+```python
+# 배치 내에서 특징이 서로 뭉치지 않고 '고르게 퍼지도록'
+x = F.normalize(x, dim=-1)                       # L2 정규화
+d = torch.cdist(x, x); d.fill_diagonal_(float('inf'))
+d_n = d.min(dim=1).values                        # 각 점에서 가장 가까운 점까지 거리
+L_koleo = -(d_n + 1e-8).log().mean()             # ∝ -1/n Σ log(d_{n,i})
+```
+
+- Kozachenko–Leonenko **미분 엔트로피 추정량**에서 유래 → "특징이 공간을 고르게 채우게".
+- 효과: **nearest-neighbor 검색(retrieval)** 개선(Oxford-M 55.6 → 63.9).
+
+### B.3 Sinkhorn-Knopp centering (SwAV)
+
+```python
+# teacher softmax-centering 을 SwAV 의 Sinkhorn-Knopp 배치정규화로 교체 (3회 반복)
+for _ in range(3):
+    Q = Q / Q.sum(dim=0, keepdim=True)   # 열 정규화
+    Q = Q / Q.sum(dim=1, keepdim=True)   # 행 정규화
+# student 쪽은 softmax 사용
+```
+
+- DINO 의 "centering(mean 빼기)"을 **더 강한 균형화**(doubly-stochastic)로 대체 → **차원 붕괴(한 prototype 쏠림) 방지**.
+- 논문: **3 iterations** 로 충분.
+
+### B.4 데이터 — LVD-142M (큐레이션)
+
+```python
+# 1) uncurated 풀 → 중복 제거(dedup)
+# 2) curated seed 데이터와 유사한 이미지를 '자기지도 임베딩(ViT-H/16)' 으로 검색
+# 3) 결과 ≈ 142M 이미지 (LVD-142M)   ← 20 nodes × 8 V100, <2일
+```
+
+- 핵심 실험: **LVD-142M > ImageNet-22k / 무작위 uncurated** (ImageNet-A 73.9 vs 59.4).
+- 즉 **"더 많은 데이터"가 아니라 "더 좋은 데이터"** 가 이겼다.
+
+### B.5 대형 → 소형 증류
+
+```python
+# ViT-g/14 (1B params) 를 먼저 학습 → ViT-S/B/L 로 증류(distillation)
+#  마스킹·stochastic depth 제거, iBOT loss 를 두 global crop 에 적용, EMA student 를 최종 모델로
+```
+
+- 증류가 **from-scratch 보다 낫다**(특히 ViT-L 에서도).
+- "frozen feature" 로도 강력 → **finetuning 이 선택사항**.
+
+### B.6 forward (요약 pseudocode)
+
+```python
+globals = [g1, g2]; locals = [l1..lk]
+# student: multi-crop 전부
+s_cls, s_patch = student(globals + locals)
+# teacher: global 만
+t_cls, t_patch = teacher(g1), teacher(g2)     # stop-grad + EMA
+
+L = L_dino(s_cls, t_cls, sinkhorn(t_cls)) \
+  + L_ibot(s_patch_masked, t_patch) \
+  + lambda_koleo * L_koleo(s_cls)
+```
+
+---
+
+## 한눈에 보는 대비 (구조 관점)
+
+| | **BEiT** | **iBOT** | **DINOv2** |
+|---|---|---|---|
+| 타깃 | dVAE **하드** 토큰 | teacher **soft** 패치분포 | **DINO + iBOT** (soft) |
+| 토크나이저 | **오프라인** dVAE(2단계) | **온라인** EMA teacher(1단계) | 온라인 EMA + **증류** |
+| 손실 | CE(8192) | CE: L[CLS]+L[MIM] | L_DINO+L_iBOT+**KoLeo** |
+| centering | — | teacher centering | **Sinkhorn-Knopp(3 iter)** |
+| 인코더 입력 | 보이는 + `[MASK]` | 보이는 + `[MASK]` | 보이는 + `[MASK]` + multi-crop |
+| 마스킹 | blockwise ~40% | blockwise ~30% | blockwise (iBOT branch) |
+| 데이터 | IN-1K | IN-22k | **LVD-142M**(큐레이션) |
+| 특기 | 의미 토큰 | dense/robust | **범용 frozen 특징** |
+
+**핵심 문장:** BEiT 는 토크나이저를 **미리 학습**했고, iBOT 는 그것을 **student 자신의 EMA**로 바꿨으며, DINOv2 는 iBOT·DINO 를 **합쳐 데이터 큐레이션으로 밀어붙였다**.

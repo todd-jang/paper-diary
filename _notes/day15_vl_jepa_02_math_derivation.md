@@ -1,0 +1,35 @@
+---
+layout: default
+title: "Day 15-16 VL-JEPA — 02 · 수식 유도 — JEPA 에너지 손실함수 및 Collapse 방지 메커니즘"
+paper_id: vl-jepa
+date: 2026-11-02
+---
+
+# 02 · 수식 유도 — JEPA 에너지 손실함수 및 Collapse 방지 메커니즘
+
+> **대상**: VL-JEPA 목적함수 유도  
+> **세션 일자**: 2026.11.02(월) ~ 11.03(화)
+
+---
+
+## 1. 목적함수 (Prediction in Latent Space)
+
+JEPA는 픽셀 도메인 재구성 손실 대신 표현 공간에서의 거리 함수를 최소화한다:
+
+$$\mathcal{L}_{JEPA} = D(\hat{s}_y, s_y) = D\Big(\text{Pred}_{\phi}(s_x, z), \text{Enc}_{\theta_{target}}(y)\Big)$$
+
+- $s_x = \text{Enc}_{\theta}(x)$ : 온라인 인코더를 통한 컨텍스트 표현
+- $s_y = \text{Enc}_{\bar{\theta}}(y)$ : EMA 타깃 인코더를 통한 실제 타깃 영역 표현
+- $z$ : 언어 컨디셔닝 벡터
+- $D(\cdot, \cdot)$ : 정규화된 표현 간의 L1/L2 또는 코사인 비유사도
+
+---
+
+## 2. Information Collapse 방지 증명 정리
+
+- **대조학습(Contrastive)**: Negative pair를 분모에 두어 정보 붕괴 방지 (계산량 $O(N^2)$)
+- **JEPA/BYOL 계열**:
+  1. Target 인코더에 대한 $\text{sg}[\cdot]$ (Stop Gradient)
+  2. 비대칭 예측기 구조 ($\text{Predictor}$)
+  3. EMA 모멘텀 갱신을 통한 주파수 필터링
+  4. 예측 오차 최소화 과정에서 표현이 상수(constant)로 수렴하지 않는 동역학

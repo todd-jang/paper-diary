@@ -1,0 +1,212 @@
+---
+layout: default
+title: "Day 08 RT-DETR — 01 · 코드워크스루 — RT-DETR 공식 구현 (v1 PyTorch · v2 · 배포 경로)"
+paper_id: rt-detr
+date: 2026-10-21
+---
+
+# 01 · 코드워크스루 — RT-DETR 공식 구현 (v1 PyTorch · v2 · 배포 경로)
+
+> 원문: RT-DETR [arXiv:2304.08069](https://arxiv.org/abs/2304.08069) · 코드: [lyuwenyu/rt-detr](https://github.com/lyuwenyu/rt-detr) (v1 PyTorch + Paddle, v2 PyTorch + Paddle, benchmark, tools)
+> **확인 방법:** 실제 clone 후 읽음. clone 위치 `/var/folders/4g/pj3lkl1s0wg3j99tm437bfw80000gn/T/opencode/rt-detr` (임시 경로 → 재현 시 `git clone --depth 1 https://github.com/lyuwenyu/rt-detr`)
+> **주의:** Day 07의 `day07_detr/01_코드워크스루.md`가 **DETR 원문 저장소(`facebookresearch/detr`)** 대상이었다면, 여기는 **RT-DETR 저장소** 대상이다. DETR 쪽 라인(매칭·SetCriterion)은 Day 07 문서를 먼저 볼 것.
+
+---
+
+## 1. 저장소 실사 — 4개 트랙이 한 저장소에
+
+```
+rt-detr/
+├─ rtdetr_pytorch/        # v1 (PyTorch)  ← 오늘의 주 대상
+│  ├─ src/zoo/rtdetr/     # 모델 코드 8개 파일
+│  ├─ configs/rtdetr/     # include/rtdetr_r50vd.yml 등 (하이퍼파라미터의 실제 위치)
+│  └─ tools/              # train.py · infer.py · export_onnx.py
+├─ rtdetr_paddle/         # v1 (PaddleDetection 기반) — 공식 논문 실험의 원본 구현
+├─ rtdetrv2_pytorch/      # v2 (2024) — deformable attention + denoising
+│  ├─ src/zoo/rtdetr/     # rtdetrv2_decoder.py · rtdetrv2_criterion.py · denoising.py 추가
+│  └─ references/deploy/  # rtdetrv2_torch.py · _onnxruntime.py · _openvino.py · _tensorrt.py
+├─ rtdetrv2_paddle/
+└─ benchmark/             # 실시간 속도 벤치마크(§3.2의 end-to-end speed benchmark 구현)
+```
+
+- **v1 PyTorch는 "학습·검증용"**, **v2 `references/deploy/`가 "실전 배포용"**이라 분리가 명확하다. v1의 `tools/export_onnx.py`도 있지만 v2가 배포 경로를 더 넓게 지원한다(TensorRT/ONNXRuntime/OpenVINO/TorchScript).
+- v1 소스 8파일: `rtdetr.py`(모델 본체) · `hybrid_encoder.py` · `rtdetr_decoder.py` · `matcher.py` · `rtdetr_criterion.py` · `denoising.py`(v2) · `box_ops.py` · `rtdetr_postprocessor.py` · `utils.py`.
+
+---
+
+## 2. 하이브리드 인코더 — AIFI(§4.2) ↔ CCFF 라인 대응
+
+논문 §4.2의 두 모듈이 **클래스 하나(`HybridEncoder`) 안에 분리 구현**되어 있다.
+
+### 2.1 AIFI = S5 단일 스케일 self-attention
+
+```python
+# hybrid_encoder.py:192-193  (설정: 마지막 레벨만 인코더에 통과)
+use_encoder_idx=[2],
+num_encoder_layers=1,
+```
+
+```python
+# hybrid_encoder.py:291-303  (forward — 논문 식 (1)의 Q=K=V=Flatten(S5))
+for i, enc_ind in enumerate(self.use_encoder_idx):
+    h, w = proj_feats[enc_ind].shape[2:]
+    src_flatten = proj_feats[enc_ind].flatten(2).permute(0, 2, 1)   # Q=K=V=Flatten(S5)
+    pos_embed = self.build_2d_sincos_position_embedding(w, h, self.hidden_dim, self.pe_temperature)
+    memory = self.encoder[i](src_flatten, pos_embed=pos_embed)
+    proj_feats[enc_ind] = memory.permute(0, 2, 1).reshape(-1, self.hidden_dim, h, w).contiguous()
+```
+
+- `use_encoder_idx=[2]`가 **"인코더는 S5에만"**이라는 논문 결정을 코드에서 강제한다(Day 07 §6.1에서 같은 라인 확인).
+- 인코더 블록은 `TransformerEncoderLayer`(116-161행) — 표준 `nn.MultiheadAttention` + FFN, `with_pos_embed`로 **매 층마다** pos enc를 더함(DETR 원문과 동일한 주의 규약).
+- 2D sine pos enc는 자체 구현(266-284행): x·y 축 각각 `d/4`개의 sine·cosine을 **concatenate** → 총 d 채널.
+
+### 2.2 CCFF = top-down FPN + bottom-up PAN
+
+```python
+# hybrid_encoder.py:233-251  (융합 블록 구성)
+self.lateral_convs = nn.ModuleList([...])   # top-down: 1x1 conv
+self.fpn_blocks    = nn.ModuleList([CSPRepLayer(hidden_dim * 2, hidden_dim, round(3 * depth_mult), ...)])
+self.downsample_convs = nn.ModuleList([...])  # bottom-up: 3x3 stride2 conv
+self.pan_blocks    = nn.ModuleList([CSPRepLayer(hidden_dim * 2, hidden_dim, ...)])
+```
+
+```python
+# hybrid_encoder.py:88-112  (class CSPRepLayer = 논문 Fig 5의 fusion block)
+self.conv1 = ConvNormLayer(in_channels, hidden_channels, 1, 1, ...)   # 1x1 conv
+self.conv2 = ConvNormLayer(in_channels, hidden_channels, 1, 1, ...)   # 1x1 conv
+self.bottlenecks = nn.Sequential(*[RepVggBlock(hidden_channels, hidden_channels, ...) for _ in range(num_blocks)])
+...
+def forward(self, x):
+    x_1 = self.bottlenecks(self.conv1(x))
+    x_2 = self.conv2(x)
+    return self.conv3(x_1 + x_2)          # 두 경로 element-wise add
+```
+
+- 논문 Fig 5의 "fusion block = 채널 조정 1×1 conv + N개 RepBlock + element-wise add"가 **정확히 이 클래스**다. `num_blocks=3`(`round(3 * depth_mult)`).
+- `RepVggBlock`(37-85행)은 train-time 3×3+1×1 두 갈래를 **inference 때 단일 3×3으로 fusion**한다(`get_equivalent_kernel_bias`, 62-66행) — RepVGG의 재사용성 이득(속도·수렴)이 그대로 들어온다.
+- 실제 융합 순서는 forward(306-323행): top-down은 `F.interpolate(scale_factor=2)` + concat + `fpn_blocks`, bottom-up은 downsample + concat + `pan_blocks` — Day 07 §6.1에서 확인한 것과 동일.
+
+---
+
+## 3. 디코더와 쿼리 선택 (§4.3) — 06_쿼리선택 자료의 코드 근거
+
+```python
+# rtdetr_decoder.py:488-515  (forward — 쿼리 선택)
+enc_outputs_class = self.enc_score_head(output_memory)              # (B, N, 80)
+enc_outputs_coord_unact = self.enc_bbox_head(output_memory) + anchors
+_, topk_ind = torch.topk(enc_outputs_class.max(-1).values, self.num_queries, dim=1)   # K=300
+reference_points_unact = enc_outputs_coord_unact.gather(dim=1, index=topk_ind...)
+enc_topk_bboxes = F.sigmoid(reference_points_unact)
+enc_topk_logits = enc_outputs_class.gather(dim=1, index=topk_ind...)
+target = output_memory.gather(dim=1, index=topk_ind...)             # content query
+```
+
+- **랭킹은 분류 점수 단독**이다(Day 07 Q5(b)에서 확인한 함정 — 논문의 "uncertainty-minimal"은 이 연산이 아니라 **손실 쪽**에 있다).
+- `enc_topk_logits` / `enc_topk_bboxes`가 반환되는 이유: **criterion이 인코더의 선택 결과를 직접 손실에 포함**시키기 위해서다(Day 07 실습에서 "인코더 헤드 직접 감독이 없으면 학습이 안 된다"가 확인된 그 지점). `rtdetr_criterion.py`가 이 둘을 받아 분류·박스 손실을 계산한다.
+- `self.enc_score_head = nn.Linear(hidden_dim, num_classes)`(352행) — 클래스 80개(+∅는 criterion 쪽 `eos_coef`).
+- `self.tgt_embed = nn.Embedding(num_queries, hidden_dim)`(344행) — DETR의 "학습된 쿼리"와 달리 **RT-DETR는 쿼리를 인코더 피처로 초기화**한다. DETR식 고정 임베딩은 v1·v2 어디에도 없다.
+
+---
+
+## 4. 매칭과 손실 — DETR와 달라진 3곳
+
+| 항목 | DETR(`facebookresearch/detr`) | RT-DETR v1(`lyuwenyu/rt-detr`) |
+|---|---|---|
+| 분류 손실 | `F.cross_entropy`(NLL) | **VarFocal Loss** (`rtdetr_criterion.py:111 loss_labels_vfl`) |
+| 매칭 분류 비용 | `−out_prob[:, tgt_ids]` (단순 확률) | **VarFocal 형태** (`matcher.py:89-91`) |
+| ∅ 가중치 | `eos_coef=0.1` (1/10) | `eos_coef=1e-4` (`rtdetr_criterion.py:32`) — 훨씬 강하게 억제 |
+| 매칭 가중치 | class 1 / bbox 5 / giou 2 | **class 2** / bbox 5 / giou 2 (`configs/.../rtdetr_r50vd.yml:75`) |
+
+```python
+# matcher.py:89-91  (VarFocal 형태의 매칭 비용)
+neg_cost_class = (1 - self.alpha) * (out_prob**self.gamma) * (-(1 - out_prob + 1e-8).log())
+pos_cost_class = self.alpha * ((1 - out_prob)**self.gamma) * (-(out_prob + 1e-8).log())
+cost_class = pos_cost_class - neg_cost_class
+```
+
+```yaml
+# configs/rtdetr/include/rtdetr_r50vd.yml:67-78
+SetCriterion:
+  weight_dict: {loss_vfl: 1, loss_bbox: 5, loss_giou: 2,}
+  losses: ['vfl', 'boxes', ]
+  alpha: 0.75
+  gamma: 2.0
+  matcher:
+    type: HungarianMatcher
+    weight_dict: {cost_class: 2, cost_bbox: 5, cost_giou: 2}
+```
+
+- **`eos_coef=1e-4`의 의미**: 300개 쿼리 중 실제 객체는 몇 개뿐이므로, 배경 슬롯의 분류 손실을 거의 0으로 눌러 "빈 슬롯" 신호를 증폭 억제한다. DETR의 0.1보다 **250배 더 강한 억제**이며, RT-DETR의 슬롯이 "선택된 top-K"라는 점(쿼리가 100개가 아니라 300개지만 의미는 같다)과 맞물린다.
+- **`alpha`/`gamma`는 VarFocal의 초점 매개변수**로 DETR 원문에 없는 값이다. 즉 RT-DETR는 DETR의 세트 손실을 그대로 물려받은 게 아니라 **분류 항을 focal 계열로 교체**했다.
+
+---
+
+## 5. 설정 파일 — 하이퍼파라미터의 실제 위치 (`configs/rtdetr/include/rtdetr_r50vd.yml`)
+
+```yaml
+HybridEncoder:
+  in_channels: [512, 1024, 2048]     # S3,S4,S5 (ResNet-50-vd)
+  feat_strides: [8, 16, 32]
+  hidden_dim: 256
+  use_encoder_idx: [2]              # AIFI는 마지막 레벨만
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.
+  enc_act: 'gelu'
+  pe_temperature: 10000
+  expansion: 1.0
+  depth_mult: 1                     # fusion block의 RepBlock 개수 = round(3*depth_mult)
+  act: 'silu'
+  eval_spatial_size: [640, 640]      # ★ 입력 640x640 → S5는 20x20=400 토큰
+
+RTDETRTransformer:
+  feat_channels: [256, 256, 256]
+  num_levels: 3
+  hidden_dim: 256
+  num_queries: 300
+  num_decoder_layers: 6
+  num_denoising: 100
+  eval_idx: -1
+```
+
+- **`eval_spatial_size: [640, 640]`**가 05 자료의 "8400 = 80²+40²+20²"를 결정한다: 640 입력 → S3 80×80, S4 40×40, S5 20×20 → 후보 6400+1600+400 = **8400**.
+- `num_denoising: 100`은 **v2 전용**(denoising task)이며 v1 설정에도 남아 있는 필드다 — v1 PyTorch에는 `denoising.py`가 없으므로 무시된다.
+- `eval_idx: -1`은 **어느 디코더 층 출력을 사용할지**(Day 07 Q5(c)의 재학습 없는 깊이 조절에 해당하는 지점).
+
+---
+
+## 6. v1 → v2 변경 (코드 차이)
+
+| 축 | v1 | v2 |
+|---|---|---|
+| attention | 표준 multi-head attention (인코더 AIFI) | **MSDeformableAttention** (`rtdetrv2_pytorch/src/zoo/rtdetr/rtdetr_decoder.py:40`, `sampling_offsets`/`attention_weights`/`value_proj` 55-57행) |
+| 쿼리 학습 | top-K 인코더 피처 | **+ denoising task** (`denoising.py:11 get_contrastive_denoising_training_group`, `dn_meta["dn_num_split"]`) |
+| criterion | `rtdetr_criterion.py` | `rtdetrv2_criterion.py` 추가 |
+| 배포 | `tools/export_onnx.py` | `references/deploy/{torch,onnxruntime,openvino,tensorrt}.py` **4종** |
+
+- v2의 denoising은 **attention mask `(300+d, 300+d)`**로 본 쿼리와 denoising 쿼리를 서로 가리고, 손실은 `dn_num_split`로 분리한다(Day 07 05 자료 Fig 4와 동일).
+- **사용자 보유 `rtdetr-l.pt`(홈 디렉터리)는 Ultralytics 구현의 RT-DETR-L**이다 — 공식 `lyuwenyu/rt-detr`와 **별개 코드베이스**(Ultralytics는 AGPL-3.0, 공식은 Apache-2.0)이며, v1 계열(R50/R101 계열) 구조에 학습·추론 편의 코드를 얹은 버전이다. **05_실전·배포_가이드**에서 다룬다.
+
+---
+
+## 7. 식 ↔ 코드 대응표
+
+| 원문 | 코드 위치 | 한 줄 요약 |
+|---|---|---|
+| §4.2 식 (1) `Q=K=V=Flatten(S5)` | `hybrid_encoder.py:291-303` | AIFI가 마지막 레벨만 통과 |
+| §4.2 AIFI(1층 transformer) | `hybrid_encoder.py:116-161` | `TransformerEncoderLayer` + 2D sine pos |
+| §4.2 2D sine pos enc | `hybrid_encoder.py:266-284` | 축별 d/4 sine·cosine concat |
+| §4.2 CCFF fusion block | `hybrid_encoder.py:88-112` | 1×1 conv ×2 + RepVggBlock + add |
+| §4.2 RepVGG fusion | `hybrid_encoder.py:37-85` | train 2-branch → inference 3×3 fusion |
+| §4.2 top-down / bottom-up | `hybrid_encoder.py:306-323` | FPN(up+concat) / PAN(down+concat) |
+| §4.3 쿼리 선택(랭킹) | `rtdetr_decoder.py:491` | `topk(enc_outputs_class.max(-1).values, 300)` — **분류 점수 기준** |
+| §4.3 content/position 쿼리 | `rtdetr_decoder.py:493-509` | gather 피처(content) + gather 박스(position) |
+| §4.3 인코더 선택 결과의 손실 포함 | `rtdetr_criterion.py`(enc_topk_* 사용) | **인코더 헤드가 직접 감독됨** |
+| §5.3 Table 4 매칭 비용 | `matcher.py:89-91` | VarFocal 형태 (alpha 0.25 / gamma 2.0) |
+| §5.3 Table 4 가중치 | `configs/.../rtdetr_r50vd.yml:75` | cost_class 2 / bbox 5 / giou 2 |
+| ∅ 억제 | `rtdetr_criterion.py:32` | `eos_coef=1e-4` (DETR 0.1보다 250배 강한 억제) |
+| 640×640 → 8400 후보 | `configs/.../rtdetr_r50vd.yml:43` | `eval_spatial_size` → 80²+40²+20² |
+| 재학습 없는 깊이 조절 | `configs/.../rtdetr_r50vd.yml:57` | `eval_idx` |
+| v2 deformable attention | `rtdetrv2_pytorch/.../rtdetr_decoder.py:40-119` | sampling_offsets + attention_weights + grid sample |
+| v2 denoising | `rtdetrv2_pytorch/.../denoising.py:11,116-119` | dn 쿼리 생성 + `dn_num_split` 손실 분리 |

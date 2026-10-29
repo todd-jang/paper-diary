@@ -1,0 +1,132 @@
+---
+layout: default
+title: "Day 04 DeepSeek-V2 — 01. 코드 워크스루 — MLA(어텐션) + DeepSeekMoE(FFN) 라인바이런 해설"
+paper_id: deepseek-v2
+date: 2026-10-18
+---
+
+# 01. 코드 워크스루 — MLA(어텐션) + DeepSeekMoE(FFN) 라인바이런 해설
+
+> 대상: DeepSeek-V2 (arXiv:2405.04434) 공식 구현 [`deepseek-ai/DeepSeek-V2`](https://github.com/deepseek-ai/DeepSeek-V2)
+> Transformer의 **두 부품**을 교체한다: 어텐션 → **MLA**, FFN → **DeepSeekMoE**.
+> 관통 질문: **"128K 문맥에서 KV cache를 어떻게 98% 줄이면서 성능은 올리나?"**
+
+---
+
+## 0. 전체 구조
+
+```
+[Transformer Block]
+  ├─ Attention  :  MHA  →  MLA (Multi-head Latent Attention)      ← KV cache 병목 해결
+  └─ FFN        :  Dense →  DeepSeekMoE (fine-grained + shared)   ← 학습비 절감
+```
+
+- **MLA**: KV를 **저랭크 잠재벡터 `c_t^KV`로 압축**해 저장 → KV cache ∝ `(d_c + d_h^R)·l`.
+- **DeepSeekMoE**: 전문가를 **잘게 쪼개고(fine-grained)**, 일부를 **공유(shared)** → 같은 활성 파라미터로 더 강하게.
+
+---
+
+## PART A. MLA — Multi-head Latent Attention
+
+### A.0 큰 그림
+
+```
+h_t ──┬─ W^DKV ─► c_t^KV (d_c=512)  ──┬─ W^UK ─► k^C (n_h·d_h)
+      │              ▲ KV cache 에는 '이것만' 저장   └─ W^UV ─► v^C
+      │
+      ├─ W^DQ ─► c_t^Q (d_c'=1536) ──┬─ W^UQ ─► q^C
+      │                              └─ W^QR ─► q^R = RoPE(W^QR c^Q)   ← decoupled RoPE
+      │
+      └─ W^KR ─► k^R = RoPE(W^KR h_t)   ← 위치 전용 소채널(공유), cache 저장
+
+attention: q = [q^C ; q^R] ,  k = [k^C ; k^R] ,  o = softmax(qᵀk/√(d_h+d_h^R)) · v^C
+```
+
+**핵심:** MHA는 토큰마다 `K,V` 전체(`2·n_h·d_h` = 32768)를 cache 했지만, MLA는 **`c^KV`(512) + `k^R`(64) = 576** 만 저장한다.
+
+### A.1 왜 MHA/GQA/MQA로는 부족한가
+
+| 방식 | KV cache/token | 문제 |
+|---|---|---|
+| **MHA** | `2·n_h·d_h` (큼) | 기준 |
+| **MQA** | `2·d_h` (1 KV head) | 표현력 손실 큼 |
+| **GQA** | `2·n_g·d_h` (g 그룹) | 절충(표현력↓) |
+| **MLA** | `(d_c + d_h^R)` | **표현력 ↑ + cache ↓** |
+
+MLA의 주장: **"성능을 희생하지 않고** KV cache를 줄인다". (논문: MHA보다 오히려 **성능 우위**, cache는 대폭 감소.)
+
+### A.2 저랭크 KV 결합 압축 (논문 식 9–11)
+
+```python
+c_kv = h_t @ W_DKV.T          # (d_c,)  ← 다운프로젝션: KV를 '잠재벡터'로 압축
+k_c  = c_kv @ W_UK.T          # 업프로젝션 → key
+v_c  = c_kv @ W_UV.T          # 업프로젝션 → value
+# 추론 시 cache 에는 c_kv 만 저장 (d_c 차원)
+```
+
+- GQA는 **KV 헤드를 공유**해 cache를 줄이지만, MLA는 **KV를 공통 저랭크 공간으로 압축**해 줄인다 → **헤드별 표현력 유지**.
+- 학습 시 잠재벡터 뒤에 **추가 RMSNorm + 스케일**을 붙여 안정화.
+
+### A.3 흡수(absorption) — K,V를 계산조차 안 한다
+
+```python
+# q^C = W^UQ c^Q ,  k^C = W^UK c^KV  ⇒  q^Cᵀk^C = c^Qᵀ (W^UQᵀ W^UK) c^KV
+# 즉 A_i = W^UQ_iᵀ W^UK_i 를 미리 접으면, K 를 materialize 하지 않고 점수를 계산
+```
+- W^UK → **W^Q 로 흡수**, W^UV → **W^O 로 흡수**.
+- 효과: **추론 시 K,V를 만들지 않음** → 메모리·연산 동시 절감. (§03 실습에서 항등식 수치 검증)
+
+### A.4 decoupled RoPE (논문 식 12–19)
+
+- RoPE를 `k^C`에 걸면 `W^UK`가 **위치행렬과 얽혀** 흡수가 깨진다(행렬곱 교환 불가).
+- 해법: RoPE를 **별도 소채널** `q^R, k^R`(각 `d_h^R=64`)에만 실음.
+  - `q^R = RoPE(W^QR c^Q)`, `k^R = RoPE(W^KR h_t)`.
+  - 어텐션: `q=[q^C;q^R]`, `k=[k^C;k^R]`, 스코어는 `q^Cᵀk^C + q^Rᵀk^R` → **C-부분 흡수 유지**.
+- cache: `c^KV` + `k^R` = `(d_c + d_h^R)·l`.
+
+---
+
+## PART B. DeepSeekMoE — FFN
+
+### B.1 두 아이디어 (논문 식 20–22)
+
+```python
+# h' = u + Σ_{i=1}^{N_s} SharedExpert_i(u)                ← 항상 켜지는 공유 전문가
+#        + Σ_{i=1}^{N_r} g_{i,t} · RoutedExpert_i(u)      ← top-K 로 고른 전문가
+# g_{i,t} = s_{i,t} if top-K else 0 ;  s_{i,t} = Softmax_i(uᵀ e_i)
+```
+
+1. **Fine-grained expert segmentation** — 전문가를 잘게 쪼개 top-K 활성 → **같은 활성 파라미터로 조합 폭발**(표현력↑).
+2. **Shared expert isolation** — 공통 지식을 **공유 전문가**가 담당 → 라우팅 전문가의 **중복 부담 제거**.
+
+### B.2 V2 설정
+
+| 항목 | 값 |
+|---|---|
+| layers | 60 |
+| hidden | 5120 |
+| n_h / d_h | 128 / 128 |
+| d_c / d_c' / d_h^R | 512 / 1536 / 64 |
+| shared experts `N_s` | 2 |
+| routed experts `N_r` | 160 |
+| activated routed `K_r` | 6 |
+| expert intermediate | 1536 |
+| 총/활성 파라미터 | **236B / 21B** |
+
+### B.3 보조 메커니즘
+
+- **Load balance**: expert parallelism 통신비 제어 + 토큰-전문가 부하 균형(device-limited routing 등).
+- **Token dropping**: 통신/연산 균형 위해 일부 드롭.
+- (V3에서 발전: auxiliary-loss-free balancing, MTP, FP8 — Day 5)
+
+---
+
+## 한눈에 보는 요약
+
+| 교체 | 기존 | DeepSeek-V2 | 이득 |
+|---|---|---|---|
+| Attention | MHA/GQA | **MLA** | KV cache **−93.3%**(논문), throughput **×5.76** |
+| FFN | Dense | **DeepSeekMoE** | 236B를 21B 활성으로 → 학습비 **−42.5%** |
+| 위치 | RoPE on K | **decoupled RoPE** | 흡수 가능성 유지 |
+
+**핵심 문장:** MLA는 **"KV를 공통 저랭크 잠재벡터로 압축 + 업프로젝션 흡수"** 로 cache와 연산을 동시에 줄이고, DeepSeekMoE는 **"잘게 + 공유"** 로 학습비를 줄인다.

@@ -1,0 +1,178 @@
+---
+layout: default
+title: "Day 01 MAE — 01. 코드 워크스루 — MAE PyTorch 라인바이런 해설"
+paper_id: mae
+date: 2026-10-15
+---
+
+# 01. 코드 워크스루 — MAE PyTorch 라인바이런 해설
+
+> 대상 코드: [`mae_pretrain_demo.py`](https://github.com/todd-jang/paper-diary/blob/main/day01_mae/mae_pretrain_demo.py) (직접 실행 가능, 검증됨)
+
+이 문서는 위 스크립트를 **위에서 아래로** 따라가며 "왜 이렇게 짰는가"를 설명한다. 실제 MAE의 축소판이지만 구조는 동일하다.
+
+---
+
+## 0. 큰 그림 — 데이터 흐름
+
+```
+이미지 x (B,3,32,32)
+   │  PatchEmbed (Conv2d, stride=P)
+   ▼
+패치 토큰 Z (B, N=64, D=192)
+   │  + 위치 임베딩
+   │  random_masking (75% 제거)
+   ▼
+보이는 패치 Z_S (B, 16, 192)          ← N의 25%만!
+   │  Encoder (6 blocks, 무겁게)
+   ▼
+latent H (B, 16, 192)
+   │  enc_to_dec 투영 (192→96)
+   │  마스크 토큰 48개 삽입 + unshuffle
+   ▼
+전체 시퀀스 (B, 64, 96)
+   │  Decoder (2 blocks, 가볍게)
+   ▼
+픽셀 예측 (B, 64, P²·C)
+   │
+   ▼
+Loss = 가려진 48개 패치에서만 MSE
+```
+
+**핵심:** 인코더는 **16개**만 보고, 디코더는 **64개** 전부를 다룬다. 이게 "비대칭"이다.
+
+---
+
+## 1. `PatchEmbed` — 이미지 → 토큰
+
+```python
+self.proj = nn.Conv2d(in_ch, embed_dim, kernel_size=patch_size, stride=patch_size)
+...
+x = self.proj(x)          # (B, D, G, G)
+x = x.flatten(2)          # (B, D, G*G)
+x = x.transpose(1, 2)     # (B, N, D)
+```
+
+- `kernel=stride=patch_size`인 Conv2d 하나가 **패치 분할 + 선형 투영**을 동시에 한다.
+  - 패치 `x_i ∈ R^{P²·C}` → `z_i = W_e x_i + b_e ∈ R^D`.
+- `32/4 = 8`, `N = 8×8 = 64`개 패치. ViT의 `PatchEmbed`와 동일한 트릭.
+
+> **포인트:** 별도로 이미지를 자르는 코드가 없는 이유 — Conv2d의 window가 곧 패치다.
+
+---
+
+## 2. `random_masking` — 어디를 가릴지 정한다
+
+```python
+len_keep = int(N * (1 - self.mask_ratio))       # 64 * 0.25 = 16
+noise = torch.rand(B, N)
+ids_shuffle = torch.argsort(noise, dim=1)       # 샘플별 랜덤 순열
+ids_restore = torch.argsort(ids_shuffle, dim=1) # 역순열
+ids_keep = ids_shuffle[:, :len_keep]            # 앞 16개를 "보이는 패치"로
+x_visible = torch.gather(x, 1, ids_keep...)     # (B,16,D)
+```
+
+`ids_restore`가 **핵심**이다. 디코더가 나중에 순서를 되돌릴 때 필요하다.
+
+`mask` 텐서:
+```python
+mask = torch.ones(B, N); mask[:, :len_keep] = 0   # 섞인 순서 기준: 뒤쪽이 마스킹
+mask = torch.gather(mask, 1, ids_restore)         # 원래 순서로 되돌림 → 0=보임,1=가림
+```
+
+> ⚠️ **흔한 오해:** `mask`는 손실을 계산할 때 "어느 패치가 가려졌나"를 알려주는 라벨이다. 학습 타깃 자체는 원본 이미지(`patchify(imgs)`)에서 나온다.
+
+---
+
+## 3. `forward_encoder` — 보이는 패치만 처리
+
+```python
+x = self.patch_embed(x)
+x = x + self.enc_pos_embed                 # 위치 정보를 "마스킹 전"에 더한다
+x, mask, ids_restore = self.random_masking(x)
+for blk in self.enc_blocks: x = blk(x)     # 16개 토큰에만 어텐션!
+x = self.enc_norm(x)
+```
+
+**MAE의 제1 설계:** 인코더에 **마스크 토큰을 넣지 않는다.**
+- BERT는 `[MASK]` 토큰을 인코더에 넣지만, MAE는 넣지 않는다.
+- 이유 ① 속도: 어텐션 비용은 토큰 수의 **제곱** → `(0.25N)² = N²/16` → 약 **16배** 절감.
+- 이유 ② 성능: 마스크 토큰이 없으면 "존재하지 않는 정보"에 어텐션하지 않아 학습 신호가 깔끔.
+
+위치 임베딩을 **마스킹 전에** 더하는 것도 중요 — 각 패치가 원래 이미지의 어느 위치였는지 보존한다.
+
+---
+
+## 4. `forward_decoder` — 마스크 토큰 + unshuffle → 픽셀 복원
+
+```python
+x = self.enc_to_dec(x)                       # (B,16,192) -> (B,16,96)
+mask_tokens = self.mask_token.expand(B, N - L, -1)  # 48개 공유 토큰
+x = torch.cat([x, mask_tokens], dim=1)       # (B,64,96) — 아직 "섞인 순서"
+x = torch.gather(x, 1, ids_restore.unsqueeze(-1)...)  # unshuffle → 원래 순서
+x = x + self.dec_pos_embed
+# decoder blocks (2개) → dec_pred → unpatchify
+```
+
+**MAE의 제2 설계:** 디코더는 **가볍게**. 두 가지 이유:
+1. 픽셀 복원은 저수준 작업 → 표현력을 디코더에 몰아줄 필요 없음.
+2. 디코더는 사전학습 후 **버려진다** → 여기에 파라미터를 투자하면 낭비.
+
+디코더가 무거우면: (a) 대부분의 계산이 "버려질" 부분에 쏠려 비효율, (b) 인코더가 학습할 신호를 디코더가 대신 흡수해 표현이 약해질 수 있다.
+
+공유 `mask_token` 하나를 모든 가려진 자리에 쓴다는 점도 눈여겨보기 — "여긴 정보 없음"이라는 표시일 뿐이다.
+
+---
+
+## 5. 손실 — 가려진 패치에서만 MSE
+
+```python
+target = self.patchify(imgs)        # (B,64,P²·C)
+pred   = self.patchify(pred)        # (B,64,P²·C)
+loss = (pred - target) ** 2
+loss = loss.mean(dim=-1)            # (B, N)
+loss = (loss * mask).sum() / mask.sum()   # 가려진 것만 평균
+```
+
+- `mask`가 1인(가려진) 패치에서만 오차를 계산한다.
+- **왜 보이는 패치는 빼나?** 보이는 패치는 정답을 그대로 복사하면 되므로 손실≈0인 "공짜 항"이다. 포함하면 전체 손실이 희석되어 학습 신호가 약해진다.
+- 정규화도 `mask.sum()`(=가려진 수)로 나눠서 스케일을 맞춘다.
+
+> 수학적 근거는 [`02_수식유도.md`](https://github.com/todd-jang/paper-diary/blob/main/day01_mae/02_수식유도.md) §3 참고.
+
+---
+
+## 6. `unpatchify` / `patchify` — 패치 ↔ 이미지 변환
+
+```python
+# patchify:   (B,C,H,W) -> (B, N, P*P*C)
+x = imgs.reshape(B, C, g, p, g, p).permute(0,2,4,3,5,1).reshape(B, g*g, p*p*C)
+# unpatchify: 역방향
+```
+
+`reshape → permute → reshape`로 패치 격자를 만들고 푼다. ViT 계열에서 표준적인 관용구.
+
+---
+
+## 7. 학습 루프 (요약)
+
+```python
+for imgs, _ in loader:            # 라벨(_)은 쓰지 않는다 = 자기지도!
+    loss, _, _ = model(imgs)
+    opt.zero_grad(); loss.backward(); opt.step()
+```
+
+라벨을 **버린다**는 점이 포인트 — MAE는 순수 자기지도다.
+
+---
+
+## 한눈에 보는 "MAE vs 일반 오토인코더"
+
+| | 일반 AE | MAE |
+|---|---|---|
+| 입력 | 전체 이미지 | **25%만** (나머지 제거) |
+| 병목 | 저차원 latent | 토큰 시퀀스 |
+| 인코더 | 대칭 | **비대칭**(무거움, 마스크토큰 X) |
+| 디코더 | 대칭 | **가벼움, 사전학습 후 폐기** |
+| 손실 | 전체 픽셀 | **가려진 패치만** |
+| 목적 | 압축/복원 | **표현 학습** |

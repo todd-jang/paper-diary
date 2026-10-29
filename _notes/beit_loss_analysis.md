@@ -2,7 +2,7 @@
 layout: default
 title: "Day 01: Pre-training Loss Analysis"
 paper_id: beit-simmim
-date: 2026-10-30
+date: 2026-10-29
 ---
 
 # Experiment Notes

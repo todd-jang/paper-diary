@@ -2,6 +2,9 @@ title: My Paper Diary
 description: Personal research diary
 theme: minima
 repository: todd-jang/paper-diary
+url: "https://todd-jang.github.io"
+baseurl: "/paper-diary"
+future: true
 
 # Add custom navigation pages to the header
 header_pages:

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Left-Right Symmetry Breaking in CLIP-style VLMs</title>
+  <link rel="stylesheet" href="halloween.css">
+</head>
+<body>
+  <main class="poster">
+    <span class="bat" style="left:64mm; top:22mm;">🦇</span>
+    <span class="bat" style="right:88mm; top:54mm;">🦇</span>
+
+    <header class="hero">
+      <span class="moon"></span>
+      <div class="eyebrow">Spatial Grounding in VLMs · Halloween 자율세션 2026.10.30 · No. 4/4</div>
+      <h1>Left-Right Symmetry Breaking in CLIP-style VLMs</h1>
+      <p class="subtitle">A controllable 1D testbed for how relational (left/right) competence actually forms — and a mechanistic answer</p>
+      <div class="thesis"><b>Central claim</b> — CLIP-style contrastive training on a 1D image-text testbed <i>does</i> learn left-right relations, and an <b>attention decomposition</b> shows the mechanism: positional × token embedding interactions induce a <b>horizontal attention gradient</b> that breaks left-right symmetry. Ablate it, and discrimination collapses.</div>
+      <div class="meta">Takaki Yamamoto · Chihiro Noguchi · Toshihiro Tanizawa — <code>arXiv:2601.12809 (v2)</code> · ICML 2026</div>
+      <div class="stats">
+        <div class="stat"><b>1D testbed</b><span>controllable image-text scenes, paired left/right descriptions</span></div>
+        <div class="stat"><b>Label &gt; layout</b><span>label diversity is the primary driver of generalization</span></div>
+        <div class="stat"><b>Attention</b><span>decomposition finds the symmetry-breaking gradient</span></div>
+        <div class="stat"><b>Ablation</b><span>removing the term substantially cuts left-right discrimination</span></div>
+      </div>
+    </header>
+
+    <section class="journey">
+      <div><b>Question</b><span>is spatial understanding truly acquired?</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>Testbed</b><span>synthetic 1D scenes · CLIP objective</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>Mechanism</b><span>positional×token → horizontal attention gradient</span></div>
+    </section>
+
+    <section class="columns">
+      <div class="column">
+        <article class="card blood">
+          <h2><small>01 · PROBLEM</small> Does a VLM really know "left of"?</h2>
+          <p>Spatial understanding remains a key challenge in vision-language models — and it is unclear whether apparent competence is truly acquired, and through <b>what mechanism</b>. Known symptoms in CLIP-style models include weak parity between mirrored relations.</p>
+          <p>Instead of benchmarking a giant model, this paper builds the smallest <b>controllable</b> setting in which relational competence demonstrably forms — so the emergence can be studied, not just scored.</p>
+        </article>
+
+        <article class="card pumpkin-class">
+          <h2><small>02 · SETUP</small> Controllable 1D image-text testbed</h2>
+          <div class="flow">
+            <div class="node">1D scenes<br>1–2 objects</div><span class="arrow">&rsaquo;</span>
+            <div class="node venom-node">paired left/right<br>descriptions</div><span class="arrow">&rsaquo;</span>
+            <div class="node mist-node">CLIP-style<br>contrastive training</div><span class="arrow">&rsaquo;</span>
+            <div class="node pumpkin-node">unseen object<br>pairs test</div>
+          </div>
+          <p>Lightweight Transformer-based <b>vision and text encoders</b> are trained end-to-end on one- and two-object scenes, then evaluated on <b>generalization to unseen object pairs</b> while varying <b>label diversity</b> and <b>layout diversity</b> systematically.</p>
+        </article>
+
+        <article class="card venom">
+          <h2><small>03 · HOW TO READ</small> A toy testbed with a scope</h2>
+          <p>Everything is deliberately minimal: <b>1D scenes with one or two objects</b>, lightweight Transformer encoders, CLIP-style contrastive loss. "Generalization" means unseen object pairs inside this testbed — that controlled scale is what makes mechanism claims possible at all.</p>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card venom">
+          <h2><small>04 · FINDING A</small> Contrastive training learns left-right — conditionally</h2>
+          <ul>
+            <li>Contrastive training <b>does</b> acquire left-right relational competence in this testbed.</li>
+            <li><b>Label diversity matters more than layout diversity</b> — the primary driver of generalization to unseen pairs.</li>
+            <li>So the "does it generalize?" answer depends on how varied the <i>descriptions</i> are, not merely how the scene is arranged.</li>
+          </ul>
+          <div class="callout"><b>Data design implication:</b> to teach relational grounding, invest in describing the same relation in many ways — mirroring augmentation alone is not the lever.</div>
+        </article>
+
+        <article class="card ghost">
+          <h2><small>05 · READING NOTES</small> Three levels of generalization</h2>
+          <p>The testbed scores <b>three distinct generalization types</b> (Figs. 3·9·11): <b>single-object positional</b> (does an object's position map to "left"/"right" text), <b>seen-pair</b> (relations for object pairs observed in training), and <b>unseen-pair</b> (compositional transfer to novel pairs). Training dynamics (Fig. 11) track when each level switches on.</p>
+          <p>Why "symmetry breaking" is the right frame: mirror-symmetric inputs yield symmetric representations unless something <i>breaks</i> the symmetry — here the break is shown to be created by the model's own positional interaction, a mechanistic complement to dataset-level bias accounts.</p>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card violet">
+          <h2><small>06 · FINDING B</small> Symmetry is broken inside attention</h2>
+          <p>Decomposing the pre-softmax attention logit (Figs. 5·12–14) isolates which term carries the left/right signal: interactions between <b>positional and token embeddings</b> induce a <b>horizontal attention gradient</b> — a stable left/right asymmetry in how heads attend along the scene axis. The reduced 1-layer model (Fig. 4) isolates the effect with a minimal parameter budget.</p>
+          <div class="metrics">
+            <div class="metric"><b>Position × token</b><span>interaction → horizontal gradient (Fig. 5·14)</span></div>
+            <div class="metric venom-metric"><b>Ablated</b><span>removing it substantially cuts left–right discrimination</span></div>
+            <div class="metric"><b>Control</b><span>non-generalizing models lack the gradient (Fig. 15)</span></div>
+          </div>
+        </article>
+
+        <article class="card mist">
+          <h2><small>07 · WHAT TUNES IT</small> Levers on the breaking</h2>
+          <ul>
+            <li><b>Weight decay</b> — Fig. 10 scans it and shows unseen-pair generalization depends on the value: the regularization level shapes whether the symmetry-breaking solution survives.</li>
+            <li><b>Label vs layout diversity</b> — systematic variation shows label diversity is the primary driver (Figs. 3·8).</li>
+            <li><b>Embedding geometry</b> — Fig. 7 probes image/text token alignment via learned rotation matrices, connecting the gradient to representational space.</li>
+          </ul>
+          <div class="callout"><b>Mechanism check:</b> the strongest evidence pairing (Fig. 14 present &amp; generalizing vs Fig. 15 absent &amp; non-generalizing) shows the gradient <i>tracks</i> competence — correlation aligned with the ablation's causal cut.</div>
+        </article>
+
+        <article class="card mist">
+          <h2><small>08 · CONFIG &amp; PROTOCOL</small> How the toy is built — Figs 4·10</h2>
+          <ul>
+            <li><b>Fig 4 —</b> reduced 1-layer model: <b>MB = Mrep = 1, Mh = 4</b> — the minimal setting where the symmetry either breaks on its own or does not.</li>
+            <li><b>Fig 10 —</b> generalizing config: <b>MB = 2, Mrep = 2, Mh = 4, dhead = 32</b> — the parameterization behind the mechanism scans.</li>
+            <li><b>Figs 12·13 —</b> weight/bias decomposition of the breaking pathway; <b>Fig 15</b> is the non-generalizing control that lacks it.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="wide" style="grid-template-columns:1fr 1fr">
+      <article class="card blood">
+        <h2><small>09 · OPEN LIMITS</small> What remains unresolved?</h2>
+        <p>Transfer of the mechanism to full-resolution, multi-object scenes and to production VLMs is beyond the testbed's evidence; the paper's own discussion frames the boundary. Production-scale validation would repeat the decomposition pipeline on trained CLIP checkpoints.</p>
+      </article>
+      <article class="card mist">
+        <h2><small>10 · SESSION</small> Team poster #4 of 4</h2>
+        <p>할로윈 자율세션 · 팀 공유 논문 포스터 4종의 마지막 한 편 · ICML 2026 게재.</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <strong>Reference</strong>
+      <p>Takaki Yamamoto, Chihiro Noguchi, Toshihiro Tanizawa. "Left-Right Symmetry Breaking in CLIP-style Vision-Language Models Trained on Synthetic Spatial-Relation Data." <a href="https://arxiv.org/abs/2601.12809">arXiv:2601.12809</a> (v2, ICML 2026). 논리·수치는 원문 abstract + Fig 3·5·9~15 캡션에서 전사·재확인 (2026-10-30 자율세션 · ID 검증 원칙).</p>
+      <span class="pumpkin-tag">🎃</span>
+    </footer>
+  </main>
+</body>
+</html>

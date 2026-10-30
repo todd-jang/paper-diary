@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Perception Encoder — the best embeddings live mid-network</title>
+  <link rel="stylesheet" href="halloween.css">
+</head>
+<body>
+  <main class="poster">
+    <span class="bat" style="left:70mm; top:24mm;">🦇</span>
+    <span class="bat" style="right:64mm; top:56mm;">🦇</span>
+
+    <header class="hero">
+      <span class="moon"></span>
+      <div class="eyebrow">Vision Encoder · Halloween 자율세션 2026.10.30 · No. 3/4</div>
+      <h1>Perception Encoder: The best visual embeddings<br>are not at the output of the network</h1>
+      <p class="subtitle">One contrastive recipe, every task — if you align with the <i>right layers</i></p>
+      <div class="thesis"><b>Central claim</b> — After a scaled image pretraining recipe + robust video data engine, <b>contrastive vision-language training alone</b> yields strong, general embeddings for classification, captioning, and localization. The catch: they hide in the <b>intermediate layers</b>, so two alignment methods draw them out.</div>
+      <div class="meta">Daniel Bolya · Po-Yao Huang · Peize Sun · et al. (Meta) — <code>arXiv:2504.13181 (v2)</code> · Apr 2025</div>
+      <div class="stats">
+        <div class="stat"><b>86.6</b><span>avg zero-shot ImageNet robustness</span></div>
+        <div class="stat"><b>76.9</b><span>zero-shot Kinetics-400 video</span></div>
+        <div class="stat"><b>94.6 / 80.9 / 82.7</b><span>DocVQA / InfographicVQA / PerceptionTest · 8B LLM</span></div>
+        <div class="stat"><b>66.0</b><span>COCO box mAP · new SotA</span></div>
+      </div>
+    </header>
+
+    <section class="journey">
+      <div><b>Observation</b><span>best embeddings = mid-layers</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>PE recipe</b><span>contrastive VL + two alignments</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>One family</b><span>classification · QA · spatial</span></div>
+    </section>
+
+    <section class="columns">
+      <div class="column">
+        <article class="card blood">
+          <h2><small>01 · PROBLEM</small> One encoder per task is a tax</h2>
+          <p>Traditionally each downstream family wanted its own pretraining objective — classification, captioning, localization each pulled the encoder's features to a different "best" layer, so a single output embedding could not serve all.</p>
+          <p>PE's reframing: train <b>one</b> contrastive vision-language recipe at scale, and the general-purpose embedding exists — just <b>not where the output head looks</b>.</p>
+        </article>
+
+        <article class="card pumpkin-class">
+          <h2><small>02 · METHOD</small> Draw the embedding out</h2>
+          <div class="flow">
+            <div class="node">image pretraining<br>recipe · scaled</div><span class="arrow">&rsaquo;</span>
+            <div class="node mist-node">video data<br>engine</div><span class="arrow">&rsaquo;</span>
+            <div class="node venom-node">contrastive<br>VL training</div><span class="arrow">&rsaquo;</span>
+            <div class="node pumpkin-node">2 alignments<br>→ heads</div>
+          </div>
+          <ul>
+            <li><b>Language alignment</b> — for multimodal language modeling (document/image/video Q&A with an LLM on top).</li>
+            <li><b>Spatial alignment</b> — for dense prediction (detection, tracking, depth estimation).</li>
+          </ul>
+        </article>
+
+        <article class="card mist">
+          <h2><small>03 · PROBING &amp; LAYERS</small> Deep-dive evidence</h2>
+          <ul>
+            <li><b>Table 8</b> — PEcore frozen features probed with typical probing methods; quality holds across probing protocols.</li>
+            <li><b>Fig 8</b> — layer-by-layer analysis: intermediate layers of each pretraining-type (captioning, DINO-style, CLIP-style) evaluated as frozen features — <i>where</i> the useful embedding lives depends on the recipe.</li>
+            <li><b>Figs 9–12</b> — probing and downstream scalability analyses back the headline results.</li>
+          </ul>
+        </article>
+
+        <article class="card ghost">
+          <h2><small>04 · READING NOTES</small> Simplification story</h2>
+          <p>A zoo of tailored pretraining objectives collapses into <b>one contrastive recipe + two alignment heads</b>. Released: models, code, and PVD — a dataset of <b>synthetically and human-annotated videos</b>. The video data engine recaptioned video samples from 0M (image-only baseline) up to <b>17M samples</b> during scaling (Fig. 6).</p>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card violet">
+          <h2><small>05 · RESULTS</small> Best-in-class across three families</h2>
+          <div class="metrics">
+            <div class="metric"><b>86.6</b><span>zero-shot ImageNet robustness (avg)</span></div>
+            <div class="metric venom-metric"><b>76.9</b><span>zero-shot Kinetics-400</span></div>
+            <div class="metric"><b>66.0</b><span>COCO box mAP — new SotA</span></div>
+          </div>
+          <div class="metrics">
+            <div class="metric venom-metric"><b>94.6</b><span>DocVQA</span></div>
+            <div class="metric violet-metric"><b>80.9</b><span>InfographicVQA</span></div>
+            <div class="metric venom-metric"><b>82.7</b><span>PerceptionTest</span></div>
+          </div>
+          <p>Q&A numbers come from <b>8B-scale MLLM</b> stacks (Llama 3.1-8B / Qwen2.5-7B variants — Tables 10·11); classification numbers are <b>zero-shot</b>; the 66.0 COCO box mAP is a <b>system-level comparison on COCO val2017</b> (Table 15).</p>
+        </article>
+
+        <article class="card venom">
+          <h2><small>06 · HOW TO READ</small> Three benchmark families, three protocols</h2>
+          <p><b>86.6 / 76.9</b> — zero-shot classification &amp; retrieval (image robustness avg on ImageNet variants, video on Kinetics-400) · <b>94.6 / 80.9 / 82.7</b> — document/image/video Q&amp;A through an MLLM pipeline with an 8B LLM · <b>66.0</b> — system-level COCO detection against leading COCO results (Table 15). Not one leaderboard — three.</p>
+        </article>
+
+        <article class="card pumpkin-class">
+          <h2><small>07 · FAMILY</small> S/B/L — one recipe, scaled</h2>
+          <p>The family spans model steps <b>S/14 · B/14 · L/14</b>; Fig. 2 tunes the pretraining recipe on a fixed data sweep, and Figs. 3–4 show the recipe's gains persist across model sizes (S/B/L) and training steps (120K → 360K).</p>
+          <div class="callout"><b>Why contrastive alone is enough here:</b> the recipe + video engine create the alignment conditions; the two alignment heads then route the same features to language or spatial heads. One backbone, no per-task pretraining detours.</div>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card mist">
+          <h2><small>08 · HEAD-TO-HEAD</small> Table 5 · matched 0.1B / 224px scale</h2>
+          <table>
+            <thead><tr><th>Zero-shot</th><th>SigLIP2-B</th><th>PEcore-B</th></tr></thead>
+            <tbody>
+              <tr><td>ObjectNet (IN overlap 113)</td><td>73.6</td><td>71.9</td></tr>
+              <tr><td>ObjectNet (all 313)</td><td>59.1</td><td>58.3</td></tr>
+              <tr><td>iNaturalist'17</td><td>16.9</td><td><b>25.9</b></td></tr>
+              <tr><td>Dollar St 58</td><td><b>55.9</b></td><td>52.1</td></tr>
+              <tr><td>TextCaps img→txt</td><td>72.0</td><td><b>72.3</b></td></tr>
+              <tr><td>TextCaps flip img→txt</td><td>69.8</td><td><b>71.9</b></td></tr>
+              <tr><td>PVD bench t→v</td><td>53.9</td><td><b>59.8</b></td></tr>
+              <tr><td>PVD bench v→t</td><td>60.1</td><td><b>61.1</b></td></tr>
+            </tbody>
+          </table>
+          <p class="note">Paper Table 5 rows, transcribed verbatim. At matched tiny scale results are mixed — headline best-in-class claims are at larger family scales.</p>
+        </article>
+
+        <article class="card venom">
+          <h2><small>09 · INSIGHT</small> Where the good embedding hides</h2>
+          <p>The loaded insight for anyone reusing vision encoders: <b>don't tap the last layer by default</b>. Fig. 8 evaluates intermediate layers as frozen features across tasks for different pretraining methods — the sweet layer shifts by objective, and PE's contrastive recipe moves it predictably; alignment heads do the routing.</p>
+          <div class="callout"><b>Why "language gap" matters:</b> the language alignment exists precisely because raw mid-layer embeddings are not language-ready; the alignment is the bridge that keeps both dialogue and spatial heads served.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="wide" style="grid-template-columns:1fr 1fr">
+      <article class="card blood">
+        <h2><small>10 · OPEN LIMITS</small> What remains unresolved?</h2>
+        <p>Latency/FLOP trade-offs per family member (Table 4 configurations list sizes; cost curves are in the paper's appendix scales), and the optimal alignment layer per model size is an empirical map (Figs. 8·10–12), not a closed formula. Best-at-scale claims are bounded to the evaluated task set.</p>
+      </article>
+      <article class="card mist">
+        <h2><small>11 · SESSION</small> Team poster #3 of 4</h2>
+        <p>할로윈 자율세션 · 팀 공유 논문 포스터 4종 중 세 번째 · Meta.</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <strong>Reference</strong>
+      <p>Daniel Bolya, Po-Yao Huang, Peize Sun, Jang Hyun Cho, Andrea Madotto, Chen Wei, Tengyu Ma, Jiale Zhi, Jathushan Rajasegaran, Hanoona Rasheed, Junke Wang, Marco Monteiro, Hu Xu, Shiyu Dong, Nikhila Ravi, Daniel Li, Piotr Dollár, Christoph Feichtenhofer. "Perception Encoder: The best visual embeddings are not at the output of the network." <a href="https://arxiv.org/abs/2504.13181">arXiv:2504.13181</a> (v2). 헤드라인 수치는 abstract, 세부 수치는 Table 5에서 전사·재확인 (2026-10-30 자율세션 · ID 검증 원칙).</p>
+      <span class="pumpkin-tag">🎃</span>
+    </footer>
+  </main>
+</body>
+</html>

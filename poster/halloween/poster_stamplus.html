@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STAMPlus — Structured All-Mask Prediction</title>
+  <link rel="stylesheet" href="halloween.css">
+</head>
+<body>
+  <main class="poster">
+    <span class="bat" style="left:60mm; top:20mm;">🦇</span>
+    <span class="bat" style="right:70mm; top:52mm;">🦇</span>
+
+    <header class="hero">
+      <span class="moon"></span>
+      <div class="eyebrow">MLLM Segmentation · Halloween 자율세션 2026.10.30 · No. 1/4</div>
+      <h1>Better, Stronger, Faster, Broader:<br>Structured All-Mask Prediction (STAMPlus)</h1>
+      <p class="subtitle">Decouple dialogue from mask prediction — one non-autoregressive pass for every target</p>
+      <div class="thesis"><b>Central claim</b> — MLLM segmentation faces a trilemma: segmentation performance, preserved dialogue, fast inference. STAMP/STAMPlus reconcile all three by emitting one trigger token and predicting <b>all masks in a single non-autoregressive pass</b>.</div>
+      <div class="meta">Jiazhen Liu · Mingkuan Feng · Long Chen — <code>arXiv:2608.02791</code> · Aug 2026</div>
+      <div class="stats">
+        <div class="stat"><b>81.0</b><span>RefCOCO-family avg cIoU · Qwen2-7B · Table II</span></div>
+        <div class="stat"><b>64.0</b><span>ReasonSeg avg (4 scores) · Table IV</span></div>
+        <div class="stat"><b>13.50 → 5.16 s</b><span>12-category latency · repeated STAMP vs one-pass · abstract</span></div>
+        <div class="stat"><b>76.2</b><span>RRSIS-D avg · Table V</span></div>
+      </div>
+    </header>
+
+    <section class="journey">
+      <div><b>Trilemma</b><span>accuracy ↔ dialogue ↔ latency</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>STAMP</b><span>binary all-mask in one pass</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>STAMPlus</b><span>structured multi-target · IDs + boxes</span></div>
+    </section>
+
+    <section class="columns">
+      <div class="column">
+        <article class="card blood">
+          <h2><small>01 · PROBLEM</small> The segmentation trilemma</h2>
+          <p>Segmentation methods on MLLMs must be <b>accurate</b>, must not damage the LLM's <b>dialogue ability</b>, and must stay <b>fast</b>. The two dominant families each break one leg:</p>
+          <ul>
+            <li><b>Embedding-prediction</b> — pixel-level objectives can disrupt language modeling.</li>
+            <li><b>Next-token generation of masks</b> — efficient dialogue, but inefficient for dense masks (autoregressive, repeated).</li>
+          </ul>
+          <p>And binary all-mask prediction cannot store <b>multiple identities</b> without repeating a target-specific pass — the "repeated STAMP" cost on the right.</p>
+        </article>
+
+        <article class="card pumpkin-class">
+          <h2><small>02 · METHOD A</small> STAMP — Simultaneous Textual All-Mask Prediction</h2>
+          <div class="flow">
+            <div class="node">Image<br>patch features</div><span class="arrow">&rsaquo;</span>
+            <div class="node pumpkin-node">in-vocab<br>&lt;SEG&gt; trigger</div><span class="arrow">&rsaquo;</span>
+            <div class="node venom-node">mask tokens<br>fused w/ patches</div><span class="arrow">&rsaquo;</span>
+            <div class="node mist-node">hybrid attention:<br>FG/BG in 1 pass</div>
+          </div>
+          <p>An <b>in-vocabulary trigger</b> keeps the autoregressive dialogue untouched. Image-aligned mask tokens are fused with corresponding patch features, and <b>hybrid attention</b> classifies all tokens as foreground/background simultaneously — non-autoregressive, single pass.</p>
+          <div class="callout"><b>Why it survives the trilemma:</b> textual path stays a normal LM token; mask path is one cheap classification sweep.</div>
+        </article>
+
+        <article class="card ghost">
+          <h2><small>03 · READING NOTES</small> Deep-frame view</h2>
+          <p>The move mirrors DETR-era set prediction: push per-instance loops into a single parallel prediction with explicit structure (IDs/boxes) — but here the loop lives <i>inside a frozen-capability MLLM</i>, so dialogue quality is the constraint being guarded.</p>
+        </article>
+
+        <article class="card mist">
+          <h2><small>04 · PARADIGM MAP</small> Table I at a glance</h2>
+          <table>
+            <thead><tr><th>Embedding-prediction family</th><th>Mask steps</th><th>Token-only supv.</th><th>Decoder-free</th></tr></thead>
+            <tbody>
+              <tr><td>LISA · GSVA · PixelLM · M2SA · READ</td><td>𝒪(N)</td><td>✗</td><td>✗</td></tr>
+            </tbody>
+          </table>
+          <p>All five current embedding-prediction models decode masks <b>outside the token interface</b> at 𝒪(N) steps per instruction. Token-prediction methods keep everything in the interface but pay step-by-step for dense masks. All-mask prediction (Fig. 2c) decouples: dialogue stays textual, masks come out in one sweep — <b>decoder-free</b>.</p>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card venom">
+          <h2><small>05 · METHOD B</small> STAMPlus — structured multi-target</h2>
+          <p>Binary masks cannot represent several semantic/instance identities. STAMPlus makes the mask space <b>structured</b> (Fig. 5):</p>
+          <div class="flow">
+            <div class="node">target list<br>+ explicit IDs</div><span class="arrow">&rsaquo;</span>
+            <div class="node pumpkin-node">optional<br>boxes</div><span class="arrow">&rsaquo;</span>
+            <div class="node mist-node">IDs → shared<br>multi-class space</div><span class="arrow">&rsaquo;</span>
+            <div class="node venom-node">all targets<br>NAR pass</div>
+          </div>
+          <ul>
+            <li><b>Open-vocabulary semantic</b> segmentation</li>
+            <li><b>Instance-aware</b> segmentation (ID binding)</li>
+            <li><b>Remote-sensing small-target</b> — high-resolution mask-token scaling preserves finer spatial evidence</li>
+          </ul>
+        </article>
+
+        <article class="card violet">
+          <h2><small>06 · RESULTS</small> One pass instead of twelve</h2>
+          <div class="metrics">
+            <div class="metric"><b>5.16 s</b><span>12-category latency · single structured pass</span></div>
+            <div class="metric venom-metric"><b>13.50 s</b><span>repeated STAMP for 12 categories</span></div>
+            <div class="metric violet-metric"><b>−61.8%</b><span>relative latency reduction (5.16/13.50 − 1)</span></div>
+          </div>
+          <p>Fig. 9: STAMP and LISA repeat a <b>similar-cost prediction per category</b>, so latency climbs steeply with the number of targets — STAMPlus's added cost is <b>marginal</b>. A single unified checkpoint retains STAMP's referring and reasoning capabilities.</p>
+           <div class="note">Abstract also reports state-of-the-art segmentation across the three structured settings while preserving general multimodal instruction following.</div>
+        </article>
+
+        <article class="card blood">
+          <h2><small>07 · ANALYSES</small> Target cues & look-twice</h2>
+          <p>Table VIII(a): swapping the Phase-1 target description for a <b>human-provided box improves</b> referring segmentation; Table VIII(b): segmentation-derived spatial grounding <b>supports reasoning</b> — "look-twice" benefits from learned grounding.</p>
+          <div class="callout"><b>Boundary:</b> Table X ablation timing measured on a <b>single NVIDIA A800</b>; Fig. 8 comparisons depend on input-resolution and model scale. Latency gains are structural, not a universal wall-clock promise.</div>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card mist">
+          <h2><small>08 · BENCHMARKS</small> Three settings, one checkpoint</h2>
+          <table>
+            <thead><tr><th>RefCOCO-family Avg cIoU · Table II</th><th>8-split avg</th></tr></thead>
+            <tbody>
+              <tr><td>LISA · Vicuna-7B</td><td>69.9</td></tr>
+              <tr><td>Text4Seg · Vicuna-7B</td><td>74.9</td></tr>
+              <tr><td>Text4Seg++ · Qwen2-7B</td><td>78.9</td></tr>
+              <tr><td>STAMP · Qwen2-2B</td><td>79.1</td></tr>
+              <tr><td>STAMPlus · Qwen2-2B</td><td>79.5</td></tr>
+              <tr><td>STAMP · Qwen2-7B</td><td>80.7</td></tr>
+              <tr class="highlight"><td><b>STAMPlus · Qwen2-7B</b></td><td><b>81.0</b></td></tr>
+            </tbody>
+          </table>
+          <p class="note">Same checkpoint elsewhere — ReasonSeg (Table IV, avg of val/test gIoU·cIoU): READ 61.1 → <b>STAMPlus-7B 64.0</b>. RRSIS-D (Table V, avg of 6 metrics): specialized RMSIN 72.4 → <b>STAMPlus-7B 76.2</b>.</p>
+        </article>
+
+        <article class="card mist">
+          <h2><small>09 · ABLATIONS</small> Table X — every part pays</h2>
+          <table>
+            <thead><tr><th>STAMP ablation (RefCOCO avg)</th><th>cIoU</th><th>Time (s)</th></tr></thead>
+            <tbody>
+              <tr><td>full, 2B @ 896²</td><td class="hi"><b>79.1</b></td><td>1.3</td></tr>
+              <tr><td>w/o A<span class="sub">hyb</span></td><td>76.2</td><td>1.3</td></tr>
+              <tr><td>w/o E<span class="sub">mask</span></td><td>73.3</td><td>1.3</td></tr>
+              <tr><td>w/o SAM</td><td>75.3</td><td>0.9</td></tr>
+              <tr><td>7B @ 896²</td><td class="hi"><b>80.7</b></td><td>2.4</td></tr>
+            </tbody>
+          </table>
+          <p>Removing the mask embedding costs the most (<b>−5.8 pt</b>); removing SAM drops −3.8 pt while cutting 0.4 s of decode — the two design axes trade cost and quality in opposite directions.</p>
+        </article>
+
+        <article class="card mist">
+          <h2><small>10 · SCALING</small> Table XI — same checkpoint, richer tokens</h2>
+          <table>
+            <thead><tr><th>Mask-token budget</th><th>RRSIS-D cIoU</th><th>EarthReason cIoU</th></tr></thead>
+            <tbody>
+              <tr><td>1024–1280 (standard)</td><td>76.5</td><td>70.7</td></tr>
+              <tr><td>2560–3200 (high-res)</td><td class="hi"><b>81.5</b></td><td class="hi"><b>71.2</b></td></tr>
+            </tbody>
+          </table>
+          <p>Scaling input resolution + mask-token budget with the <b>same STAMPlus-2B checkpoint</b> lifts RRSIS-D by <b>+5.0 cIoU</b> (gIoU 58.1→63.6, Acc@0.5 63.2→71.0) and EarthReason +0.5 — spatial resolution, not heavier training, is the lever (Table XI).</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wide">
+      <article class="card venom">
+        <h2><small>11 · HOW TO READ</small> Averages are protocol-dependent</h2>
+        <p><b>81.0</b> = mean cIoU over eight RefCOCO-family splits · <b>64.0</b> = mean of 4 ReasonSeg scores (val/test × gIoU/cIoU) · <b>76.2</b> = mean over six RRSIS-D val/test metrics. Baselines come from the paper's own tables, not re-runs.</p>
+      </article>
+      <article class="card blood">
+        <h2><small>12 · OPEN LIMITS</small> What remains unresolved?</h2>
+        <p>Ablation credits per module (Table X) and the high-resolution mask-token budget trade-off (Table XI) leave engineering choices open; absolute latency depends on GPU/runtime, and the paper's latency story is category-count sensitive.</p>
+      </article>
+      <article class="card mist">
+        <h2><small>13 · SESSION</small> Team poster #1 of 4</h2>
+        <p>할로윈 자율세션 · 팀 공유 논문 포스터. 같은 세션: Search-R1 · Perception Encoder · Left-Right Symmetry Breaking. <span style="color:var(--muted)">아무것도 안 무섭다 — 원문 수치만.</span></p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <strong>Reference</strong>
+      <p>Jiazhen Liu, Mingkuan Feng, Long Chen. "Better, Stronger, Faster, and Broader: Structured All-Mask Prediction for MLLM-Based Segmentation." <a href="https://arxiv.org/abs/2608.02791">arXiv:2608.02791</a> (Aug 2026). 모든 수치는 원문 Table II·IV·V·VIII·Table X·XI + abstract에서 전사·재확인 (2026-10-30 자율세션 · ID 검증 원칙).</p>
+      <span class="pumpkin-tag">🎃</span>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Search-R1 — LLMs that Learn to Search with RL</title>
+  <link rel="stylesheet" href="halloween.css">
+</head>
+<body>
+  <main class="poster">
+    <span class="bat" style="right:80mm; top:16mm;">🦇</span>
+    <span class="bat" style="left:90mm; top:60mm;">🦇</span>
+
+    <header class="hero">
+      <span class="moon"></span>
+      <div class="eyebrow">LLM Reasoning × Retrieval · Halloween 자율세션 2026.10.30 · No. 2/4</div>
+      <h1>Search-R1: Train LLMs to Reason <i>and</i> Leverage Search Engines with RL</h1>
+      <p class="subtitle">Search calls become part of the chain of thought — learned, not prompted</p>
+      <div class="thesis"><b>Central claim</b> — Prompting an LLM to use a search engine is unreliable; <b>reinforcement learning</b> lets the model autonomously generate multi-turn search queries during step-by-step reasoning, with real-time retrieval in the loop.</div>
+      <div class="meta">Bowen Jin · Hansi Zeng · Zhenrui Yue · et al. (Jin, Zeng, Yue, Yoon, Arik, Wang, Zamani, Han) — <code>arXiv:2503.09516 (v5)</code> · Mar 2025</div>
+      <div class="stats">
+        <div class="stat"><b>0.431</b><span>avg over 7 QA datasets · Qwen2.5-7B-base · Table 2</span></div>
+        <div class="stat"><b>vs 0.304</b><span>same-setting RAG baseline → +41.8%</span></div>
+        <div class="stat"><b>0.325 vs 0.270</b><span>Qwen2.5-3B: Search-R1 vs RAG → +20% · Table 2</span></div>
+        <div class="stat"><b>Multi-turn</b><span>search interactions inside CoT</span></div>
+      </div>
+    </header>
+
+    <section class="journey">
+      <div><b>Problem</b><span>prompted search is suboptimal</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>RL formulation</b><span>multi-turn search as trajectory</span></div><span class="arrow">&rsaquo;</span>
+      <div><b>Search-R1</b><span>masked tokens + outcome reward</span></div>
+    </section>
+
+    <section class="columns">
+      <div class="column">
+        <article class="card blood">
+          <h2><small>01 · PROBLEM</small> Why prompted RAG isn't enough</h2>
+          <ul>
+            <li>External, <b>up-to-date</b> knowledge is essential for reasoning — but a model prompted to search may lack the capability of <i>interacting optimally</i> with the engine.</li>
+            <li>Standard RAG pipelines insert retrieval at fixed points, decided by an external schedule — not by the reasoner.</li>
+          </ul>
+          <p>Search-R1 makes the retrieval policy <i>learned behavior</i>: when to search, what to query, how to reformulate across turns.</p>
+        </article>
+
+        <article class="card pumpkin-class">
+          <h2><small>02 · METHOD</small> Search inside the trajectory</h2>
+          <div class="flow">
+            <div class="node">reason<br>step</div><span class="arrow">&rsaquo;</span>
+            <div class="node pumpkin-node">emit<br>search query</div><span class="arrow">&rsaquo;</span>
+            <div class="node mist-node">real-time<br>retrieval result</div><span class="arrow">&rsaquo;</span>
+            <div class="node venom-node">continue CoT<br>→ answer</div>
+          </div>
+          <p>The LLM generates <b>(multiple) search queries during step-by-step reasoning</b> with real-time retrieval — the search engine is a tool inside the reasoning trajectory, not a pre-step.</p>
+          <div class="formula">RL objective over multi-turn search trajectories<span style="font-size:11pt; color:var(--muted)"><br>+ retrieved-token masking for stable training<br>+ outcome-based reward</span></div>
+        </article>
+
+        <article class="card mist">
+          <h2><small>03 · OPTIMIZER</small> PPO vs GRPO — Table 3</h2>
+          <table>
+            <thead><tr><th>Qwen2.5-7B variant</th><th>Avg.</th></tr></thead>
+            <tbody>
+              <tr><td>Search-R1-base (GRPO)</td><td>0.350</td></tr>
+              <tr><td>Search-R1-instruct (GRPO)</td><td>0.396</td></tr>
+              <tr class="highlight"><td><b>Search-R1-base (PPO)</b></td><td><b>0.431</b></td></tr>
+            </tbody>
+          </table>
+          <p>At 7B the PPO variant leads GRPO by <b>+0.081 avg</b> (0.431 vs 0.350) — yet Fig. 2a shows GRPO <i>converging faster</i> with late-training instability. Optimizer choice interacts with scale and init; the paper's headline run is the steadier PPO.</p>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card venom">
+          <h2><small>04 · KEY DESIGN</small> Two stabilizers</h2>
+          <p><b>Retrieved token masking.</b> Retrieved text is environment output, not the policy's own action — masking it out of the RL credit assignment keeps training stable (policy is credited on what it <i>wrote</i>). Table 4: training with retrieved-token loss masking achieves consistently higher performance across the tested LLMs.</p>
+          <p><b>Simple outcome reward.</b> Reward on the final answer, not on search behavior — so search emerges as a means, not a target.</p>
+          <p>Fig. 2 insights: <b>GRPO generally converges faster</b> but may exhibit instability after a number of training steps, while PPO is slower but steadier; base vs instruct and response-length dynamics further shape the recipe.</p>
+        </article>
+
+        <article class="card ghost">
+          <h2><small>05 · READING NOTES</small> From RAG to learned retrieval</h2>
+          <p>Fixed-point RAG treats retrieval as glue around the reasoner. Search-R1 folds retrieval <i>into</i> the reasoner's decision space — a cousin of tool-use RL, but trained on end-to-end QA outcomes only.</p>
+        </article>
+
+        <article class="card mist">
+          <h2><small>06 · BENCHMARKS</small> Avg over 7 QA datasets · Table 2</h2>
+          <table>
+            <thead><tr><th>Qwen2.5-7B-base/instruct</th><th>Avg.</th></tr></thead>
+            <tbody>
+              <tr><td>Direct Inference</td><td>0.181</td></tr>
+              <tr><td>CoT</td><td>0.106</td></tr>
+              <tr><td>IRCoT</td><td>0.239</td></tr>
+              <tr><td>Search-o1</td><td>0.206</td></tr>
+              <tr><td>RAG</td><td>0.304</td></tr>
+              <tr><td>R1 (pure RL, no search)</td><td>0.276</td></tr>
+              <tr><td>Rejection Sampling</td><td>0.348</td></tr>
+              <tr class="highlight"><td><b>Search-R1 (base)</b></td><td><b>0.431</b></td></tr>
+              <tr><td>Search-R1 (instruct)</td><td>0.385</td></tr>
+            </tbody>
+          </table>
+          <p class="note">Datasets: NQ · TriviaQA · PopQA · HotpotQA · 2wiki · Musique · Bamboogle — † in-domain / ⋆ out-domain per Table 2. Pure "R1 without search" <i>lags</i> Search-R1: search isn't free but is learnable.</p>
+        </article>
+      </div>
+
+      <div class="column">
+        <article class="card violet">
+          <h2><small>07 · RESULTS</small> Same setting, big gains</h2>
+          <div class="metrics">
+            <div class="metric"><b>0.431</b><span>Search-R1 avg · 7 datasets · Table 2</span></div>
+            <div class="metric venom-metric"><b>0.304</b><span>RAG baseline · same setting</span></div>
+            <div class="metric violet-metric"><b>+41.8%</b><span>relative (matches abstract +41%)</span></div>
+          </div>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-label">Qwen2.5-7B</span><div class="bar-track"><div class="bar-fill win" style="width:82%"></div></div><span class="bar-value">+41%</span></div>
+            <div class="bar-row"><span class="bar-label">Qwen2.5-3B</span><div class="bar-track"><div class="bar-fill venom" style="width:40%"></div></div><span class="bar-value">+20%</span></div>
+          </div>
+          <p class="note">Table 2 check: 7B 0.431/0.304 = +41.8% · 3B 0.325/0.270 = +20.4% — the abstract's headline gains reproduce from the table. 3B Search-R1 base: 0.303 avg.</p>
+          <div class="callout"><b>Compare:</b> prompting-based search (one-shot, fixed schedule) vs RL-trained search (multi-turn, learned). The gain is the policy, not the engine.</div>
+        </article>
+
+        <article class="card mist">
+          <h2><small>08 · MASKING</small> Table 4 — credit-assignment ablation</h2>
+          <table>
+            <thead><tr><th>Qwen2.5-7B</th><th>NQ</th><th>TQA</th><th>PopQA</th><th>Hotpot</th><th>2wiki</th><th>Musique</th><th>Bggle</th><th>Avg.</th></tr></thead>
+            <tbody>
+              <tr class="highlight"><td><b>w. mask</b></td><td>0.480</td><td>0.638</td><td>0.457</td><td>0.433</td><td>0.382</td><td>0.196</td><td>0.432</td><td><b>0.431</b></td></tr>
+              <tr><td>w.o. mask</td><td>0.388</td><td>0.567</td><td>0.391</td><td>0.325</td><td>0.321</td><td>0.108</td><td>0.304</td><td>0.343</td></tr>
+            </tbody>
+          </table>
+          <p>Excluding retrieved (environment) tokens from the RL credit assignment is worth <b>+0.088 avg</b> — a 25.7% relative jump, uniform across all seven datasets. The steepest losses without masking: Musique −0.088, NQ −0.092.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wide" style="grid-template-columns:1fr 1fr">
+      <article class="card venom">
+        <h2><small>09 · OPEN LIMITS</small> What remains unresolved?</h2>
+        <p>The search engine and corpus are fixed in the experiment — performance claims are engine-bound, not universal. Response-length dynamics (Fig. 2c) and multi-turn count effects leave cost/quality trade-offs to explore. GRPO's late-training instability (Fig. 2a) is an open optimizer question.</p>
+      </article>
+      <article class="card mist">
+        <h2><small>10 · SESSION</small> Team poster #2 of 4</h2>
+        <p>할로윈 자율세션 · 팀 공유 논문 포스터 4종 중 두 번째 · 코드와 체크포인트: PeterGriffinJin/Search-R1.</p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <strong>Reference</strong>
+      <p>Bowen Jin, Hansi Zeng, Zhenrui Yue, Jinsung Yoon, Sercan Arik, Dong Wang, Hamed Zamani, Jiawei Han. "Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning." <a href="https://arxiv.org/abs/2503.09516">arXiv:2503.09516</a> (v5). 모든 수치는 원문 Table 2·3·4 + Fig. 2에서 전사·재확인 (2026-10-30 자율세션 · ID 검증 원칙).</p>
+      <span class="pumpkin-tag">🎃</span>
+    </footer>
+  </main>
+</body>
+</html>

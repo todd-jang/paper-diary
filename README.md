@@ -1,3 +1,8 @@
+---
+layout: default
+title: ""
+---
+
 # 📔 논문일기 — Student / Teacher Quest (SLOW PAPER 트랙)
 
 **학습 아크:** 표현학습(MAE) → LLM 백본(DeepSeek) → 구조적 출력(DETR) → 시각-언어(LLaVA) → 예측적 월드모델(JEPA)

@@ -1,0 +1,86 @@
+================================================================
+VL-JEPA 축소 데모 — V1~V4 검증 항목
+device=mps, dim=64, epochs=20, mask=0.75
+================================================================
+
+--- tau=0.99 (EMA) ---
+loss curve: first=1.5351, last=0.8925
+[V1] baseline_err(means)=2.738 -> final_err=2.588 (5.5% 오차 감소)
+[V2] align(gap) true=0.8267 vs shuffled=0.2709 (gap=+0.5558)
+[V3] effective_rank target=27.94 -> pred=13.86
+
+--- tau=0.00 (shared) ---
+loss curve: first=1.5770, last=0.9027
+[V1] baseline_err(means)=2.034 -> final_err=2.853 (40.3% 오차 증가)
+[V2] align(gap) true=0.7260 vs shuffled=0.2516 (gap=+0.4745)
+[V3] effective_rank target=29.62 -> pred=13.50
+
+--- [V4] EMA vs shared ---
+final_err  : EMA=2.588 vs shared=2.853
+rank_final : EMA=13.86 vs shared=13.50
+
+JSON summary:
+{
+  "epochs": 20,
+  "device": "mps",
+  "runs": [
+    {
+      "tau": 0.99,
+      "final_err": 2.5875,
+      "gap_true": 0.8267,
+      "gap_shuffled": 0.2709,
+      "rank_final": 13.86,
+      "loss_curve": [
+        1.5351,
+        1.4014,
+        1.2736,
+        1.1504,
+        1.0457,
+        0.9797,
+        0.9485,
+        0.9299,
+        0.9232,
+        0.9187,
+        0.9138,
+        0.9096,
+        0.9052,
+        0.904,
+        0.9023,
+        0.8995,
+        0.897,
+        0.8995,
+        0.8925,
+        0.8925
+      ]
+    },
+    {
+      "tau": 0.0,
+      "final_err": 2.8535,
+      "gap_true": 0.726,
+      "gap_shuffled": 0.2516,
+      "rank_final": 13.5,
+      "loss_curve": [
+        1.577,
+        1.4271,
+        1.3138,
+        1.2078,
+        1.1105,
+        1.0327,
+        0.9841,
+        0.9583,
+        0.9442,
+        0.935,
+        0.9272,
+        0.922,
+        0.917,
+        0.9134,
+        0.9117,
+        0.907,
+        0.906,
+        0.9079,
+        0.9017,
+        0.9027
+      ]
+    }
+  ]
+}

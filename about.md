@@ -13,6 +13,5 @@ Welcome to **Paper Diary** — a personal research and study journal dedicated t
 - **Large Language Models & Reasoning**: DeepSeek-V2, DeepSeek-V3, DeepSeek-R1
 - **Object Detection & Vision Transformers**: DETR, RT-DETR, 3D Object Detection (DETR3D, PETR, Sparse4D)
 - **Vision-Language & Multimodal Models**: GLIP, SAM, CLIP, LLaVA
-- **Predictive World Models & Latent Dynamics**: VL-JEPA (Joint Embedding Predictive Architecture)
 
 Check out the full collection on the [Papers]({{ '/papers/' | relative_url }}) page.

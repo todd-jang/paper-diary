@@ -73,9 +73,9 @@
 1. **정렬 계약의 파라미터화**: 정렬은 (a) Predictor의 수렴 목표(Y-Encoder 생성 타깃 S_Y), (b) 양측 linear projection 뒤 **1,536차원 공유 공간**(§3.1)에서 성립한다. 비전-언어 정렬은 인코더 파라미터 교란이 아니라 **출력 공간의 대칭 제약**으로 구현된다.
 2. **실측 증명 (인코더 blindness와 무관하게 정렬이 성립)**: BASE의 retrieval 순위 연산은 Ŝ_Y(captioning 프롬프트 조건)와 텍스트 쿼리 임베딩의 cosine 유사도 기준 — 8셋 평균 Recall@1 **63.7** vs PE-Core-G 58.1 (v2). 인코더가 language-blind이어도 **Predictor가 신호 경로를 완성**한다.
 3. **동결의 방어적 가치**: 인코더를 언어 감독에 노출시키면 catastrophic interference 리스크가 생긴다. 동결은 이를 원천 차단하며, §5 world-model 계열(Zhou 2025 / Baldassarre 2025 / Assran 2025 / Terver 2025) 전반이 "frozen encoders + action-conditioned predictors"를 공용하는 설계 관행과 부합 — **같은 동결 X-Encoder를 액션조건부 모듈과 공유**할 수 있는 호환성 자산.
-4. **Y-Encoder 쪽 정렬 품질은 독립 계측** (§4.7, v2 Table 6): SugarCrepe++/VISLA hard-negative triplet accuracy — **BASE 평균 49.8 / 42.9** vs CLIP ViT-L 37.6/31.3, SigLIP2 ViT-g 48.7/32.1, PE-Core-G 45.2/31.4. "VL-JEPA BASE has a Y-Encoder that is more resilient to text hard-negatives."
+4. **Y-Encoder 쪽 정렬 품질은 독립 계측** (§4.7, v2 Table 6): SugarCrepe++/VISLA hard-negative triplet accuracy — **BASE SugarCrepe++ 63.9 / VISLA 42.9**(52.9 카테고리 평균 49.8는 Grand average 컬럼) vs PE-Core SugarCrepe 58.6, SigLIP2 VISLA 40.4. "VL-JEPA BASE has a Y-Encoder that is more resilient to text hard-negatives."
 
-**④ 방어선.** "인코더는 정렬이 아니다"를 긍정한 뒤: "정렬 본체는 공유 공간 + Predictor이며, 인코더는 교란 없이 재사용 가능한 센서 전단" — 시스템 관점의 정렬 정의. motion-centric 벤치마크(BASE 우수) 실측으로 보강 (SSv2 16.1 등).
+**④ 방어선.** "인코더는 정렬이 아니다"를 긍정한 뒤: "정렬 본체는 공유 공간 + Predictor이며, 인코더는 교란 없이 재사용 가능한 센서 전단" — 시스템 관점의 정렬 정의. motion-centric 벤치마크(BASE 우수) 실측으로 보강 (SSv2 19.3 vs PE-Core-G 9.0 등, v2 Table 1).
 
 ## [Q2-2] Predictor 출력이 특정 텍스트 조건에서 붕괴하거나 Mode averaging으로 수렴하는 것을 어떻게 방지하는가?
 
@@ -125,7 +125,7 @@
 **② 핵심 논증.**
 
 1. **동결 타깃 + InfoNCE는 비붕괴 가능**: ablation (c) — InfoNCE 23.3 분류/30.3 검색/44.3 VQA vs cosine 16.5/20.2/**46.6**, L1 14.8/15.5/41.9, L2 13.5/11.7/43.7. 저자 서술: "**only InfoNCE has the anti-collapse regularization** and can be applied with unfrozen Y-Encoder". 즉 *stabilizer 축(EMA/동결)*과 *regularizer 축(InfoNCE)*은 독립된 두 축이며, 동결 시 비붕괴 방어는 균일화 항에 위임된다.
-2. **Random projection과의 본질적 차이**: random target은 비붕괴만 만족하지만 **의미적 neighborhood 기하를 잃는다** — 다양한 plausible Y를 근접 점으로 모아 타깃 분포를 단일화한다는 §2의 표본 효율성 논거는 Y-encoder의 *의미적 cluster 기하*를 요구한다. ablation (e)가 파장을 직접 계측: Y-encoder 교체 시 PE-Core-G → 분류 **+14.4** (29.4 vs 19.5). 타깃의 의미 기하가 분류/검색 성능에 직행.
+2. **Random projection과의 본질적 차이**: random target은 비붕괴만 만족하지만 **의미적 neighborhood 기하를 잃는다** — 다양한 plausible Y를 근접 점으로 모아 타깃 분포를 단일화한다는 §2의 표본 효율성 논거는 Y-encoder의 *의미적 cluster 기하*를 요구한다. ablation (e)가 파장을 직접 계측: Y-encoder 교체 시 PEcore-G → 분류 **+14.4** (33.9 vs 19.5; PEcore-B는 29.4 · +9.9, PEcore-L 29.0 · +9.5). 타깃의 의미 기하가 분류/검색 성능에 직행.
 3. **실 레시피는 hard-freeze도 full-update도 아닌 **LR multiplier ×0.05** (ablation (b): sweet spot 0.05~0.10, 빠르게/느리게 둘 다 하락) — "타깃 안정성 vs 의미적 적합"의 튜닝된 조화점.
 
 **④ 방어선.** Random projection = 상수해 방지의 좁은 축만 해결. 의미적 근린 거리 저장 구조는 Y-encoder의 기하이며, 교체 실측(±10pt급)으로 그 영향이 정량화됨.
@@ -174,6 +174,8 @@
 
 ## [Q5-3] 잠재 경로에 대한 보상 함수(Reward function)의 원천 — 순환 논리에 빠지지 않는가?
 
+**① 전제 검증.** 질문은 "잠재 경로 ŝ₁…ŝ_T의 롤아웃 + 그 경로의 값(value)을 잠재 공간 내에서 산출"하는 JEPA 월드모델(V-JEPA-2-AC 계열) 프레임을 전제한다. 원문은 **수렴(rendoring)도 롤아웃도 수행하지 않으며**, 모든 평가가 *후보 집합 + 정답 라벨*의 판별 protocol(§4.2 "encode candidate answers ... selecting the answer that minimizes the distance")이다 — 즉 보상의 외부 공급 원천이 전제에 내장되어 있다. 전제의 유효 범위는 open-ended RL 확장 국면으로 한정되므로, **재해석 필요**.
+
 **② 핵심 논증.** 비판(자기 인증 순환)은 정당하나, 원문의 실제 설계는 외부 감독에 의존한다:
 
 1. **본 논문의 "보상" = 외부 공급**: 모든 평가(분류/검색/VQA/WP-WM/EK100/COIN)는 *후보 집합 + 정답 라벨*이 곧 보상이다. Y-encoder 공유 공간의 cosine 최근접 선택은 학습된 보상 모델이 아니라 **판별 평가 protocol의 일부**(§4.2: "encode candidate answers... selecting the answer that minimizes the distance"). 순환은 *이 범위에서* 발생하지 않는다 — SFT의 25M VQA 사람 라벨이 최종 감독 원천.
@@ -184,12 +186,16 @@
 
 ## [Q5-4] Sora급 생성 모델이 픽셀 예측의 일관성을 극복한다면 JEPA의 이론적 비교우위는 유지되는가?
 
+**① 전제 검증.** 질문은 JEPA 진영이 "픽셀 예측 대비 **압도적** 이론적 비교우위"를 주창한다고 가정한다. 원문은 그런 절대 주장을 하지 않는다 — 우위의 선언 범위는 **§4.5의 통제 실험**(동일 인코더·데이터·배치·iteration에서 embedding 예측 vs token 생성)에서 실측한 *상대적 성능과 표본 효율*이며, 절대 표현 천장(세계 지식)에 대한 우위 서술은 없다. 판정: **재해석 필요** — "압도적"을 "동일 예산 하 실측 우위 + 구조적 우위"로 좁혀 읽는 것이 정답의 형태.
+
 **② 핵심 논증.**
 
 1. **토큰-생성 병목은 데이터 규모에 무관한 구조적 성질**: (i) §2의 타깃 분포 분리 논증(직교 token → 근접 embedding)은 *토큰 통계의 성질*로 데이터량이 흡수하지 못한다; (ii) selective decoding은 *자기회귀 모델은 지원 불가, 외부 메모리/KV-cache 최적화가 필요*한 구조적 우위(§2 원문). 통제 실험의 샘플 효율 격차(15M: 14.8 vs 7.1 CIDEr, 41.0% vs 27.2%)는 동일 데이터 하 직접 실측.
 2. **v2 신규 지연시간 논증 (§4.5 끝)**: latency 비교 실험에서 **두 모델의 텍스트 생성 지연은 비슷** — 차이는 **프롬프트 인코딩/Encoder+Predictor와 텍스트 디코더의 decoupling** 구조. 모델 전면부만으로 retrieval·모니터링 수행 가능 → online video inference의 확장성이 생성형과 다르다. "픽셀 예측의 일관성"과 무관한 **구조적 우위**.
 3. **교체 계층 성능 종합 (v2)**: 학습 파라미터 50% 이하 + selective decoding 2.85× + 1.6B 규모로 CLIP/SigLIP2/PE-Core 평균 초과 (분류 52.5 / 검색 63.7) + InstructBLIP/Qwen-VL급 VQA (61.5/69.9/85.7/86.3) + WP-WM SoTA 65.7% + COIN anticipation SoTA 56.2%.
 4. **정직한 수론**: 생성 진영이 *reward-on-rollout*(자체 시뮬레이션으로 판단)을 성공적으로 도입하면 단기 우위는 상대 평가의 달관으로 이동 가능. LeCun의 주장은 "생성은 쓸모없다"가 아니라 **지능 예산의 배분 축**(예측 대상의 추상 수준 최적화)이며, 본 논문의 기여는 그 원리를 일반 VL 과제에 최초 실측한 것.
+
+**④ 방어선.** "압도적"에 대한 정확한 회신: **유지되는 것은 ① 동일 예산 실측 우위**(§4.5 통제 실험 — 15M 샘플 14.8 vs 7.1 CIDEr, 41.0% vs 27.2% top-5; 파라미터 50% 이하)와 **② 데이터 규모에 무관한 구조적 우위**(토큰 직교성 → 임베딩 근접성의 타깃 분포 차이, selective decoding 2.85×, Encoder+Predictor / Decoder decoupling)다. 반면 **세계 지식의 절대 천장은 생성 진영도 공유하는 영역**이므로 — Sora급 연산이 물리 일관성을 극복하면 JEPA가 그 축에서 열세가 아니라 "우위의 정의 축"이 다름을 재확인하는 것이다. 압도 주장 대신 "효율·인터페이스 축의 우위는 scale에 강건, 절대 표현 품질 축은 진영 공유"가 원문-충실한 방어선.
 
 ---
 
@@ -199,7 +205,7 @@
 |---|---|---|
 | Q1-1 | △ (모듈 범위 오판) | 고주파 인지는 X-Encoder(V-JEPA 2) 소관; 본 논문은 semantic 서술 계층 |
 | Q1-2 | ○ (증거 축 한계 지적) | §4.5 통제 실험 + 50% 파라미터; linear probing은 불완전 측도 |
-| Q2-1 | ○ (사실 명시적) | 정렬 본체 = 1,536d 공유 공간 + Predictor; Y-encoder hard-negative 강성 (49.8 avg) |
+| Q2-1 | ○ (사실 명시적) | 정렬 본체 = 1,536d 공유 공간 + Predictor; Y-encoder hard-negative 강성 (SugarCrepe++ 63.9) |
 | Q2-2 | ○ | InfoNCE 균일화 + 배치 24k + Y-encoder의 단봉 재형성 + discriminative 프로토콜 |
 | Q3-1 | ✗ (조건 이동 필요) | 동결 인코더+InfoNCE에서 deep predictor 역효과 없음(§4.8: 16층이 최고) |
 | Q3-2 | ✗ | 본 논문 학습에 마스킹 없음; 비율은 V-JEPA 2 upstream 이슈 |
@@ -216,5 +222,24 @@
 - [x] **표 1 "Samples seen" 정의**: BASE 3.3B = 이미지 구간 2.4B(100k×24k) + 비디오 구간 ≈0.9B(8fr×60k + 32fr×10k); **SFT 3.6B = 누적** 기준(3.3B + 83k×3,072≈0.25B ≈ 3.55B→3.6B — §4.1 본문 "only 3.6B in comparison with PE-Core-G's 86B"과 부합). 표의 수치는 **누적 시행 샘플 수**로 해석.
 - [x] **ablation (c) 캡션 해소**: v2 표 7(c)의 전체 캡션은 **"(c) Loss function (with no projection head on top frozen text encoder)"** — 4개 loss 로우 모두 *동결 텍스트 인코더 + 프로젝션 헤드 없음* 조건에서 비교. InfoNCE가 이 동결 조건조차 **cosine(-6.8 분류, -10.1 검색)·L1·L2를 앞서므로**, 균일화항의 이득이 동결 타깃에서도 별개로 실측된다. "(unfrozen 가능)" 서술은 §4.8 본문의 별도 주장.
 - [x] **(신규 확보) ablation (b) LR multiplier 전체 행** — Q4-1의 직접 실측 근거: **multiplier=0.00(완전 동결)에서도 분류 20.0/검색 25.9로 비붕괴 성능 관측** (기본 ×0.05 대비 -7.3/-4.3 — 의미 적합 부재 비용), ×1.00도 하락(-3.6/-1.4/-1.8) → sweet spot 0.05~0.10.
+
+### 원문 대조 채점 — 2026-11-03 세션 (arXiv 2512.10942 v2 직접 조회)
+
+| 문항 | 점수 | 판정 근거 |
+|---|---|---|
+| Q1-1 | 95 | §3.1 아키텍처·34.2/32.7 수치 정확, 모듈 범위 교정 정통 |
+| Q1-2 | 93 | §4.5 통제 실험 수치 전부 정확(1.23/1.35 → 14.8/41.0 vs 7.1/27.2); MAE linear probing은 부대응 축으로 정직하게 한정 |
+| Q2-1 | 90 | §4.7 수치 재배열 발견 → 세션 중 정정(63.9/42.9 + PE-Core 58.6, SSv2 v2 19.3); 핵심 논증(정렬 본체=공유 공간) 원문 부합 |
+| Q2-2 | 95 | §2 light-switch 원문 예시·24k 배치·discriminative protocol 정확; 미비점(open-ended 다양성) 자발 인정 |
+| Q3-1 | 96 | ablation (d) 전 행 정확(0-16 최고 45.5 VQA, causal -1.9, 초기화 트레이드오프) |
+| Q3-2 | 92 | "학습 루프 마스킹 부재" 원문 확인(전체 프레임 입력 + §3.2 커리큘럼); V-JEPA 2 ≈90% 인용은 upstream 정확 |
+| Q4-1 | 90 | ablation (b)(c) 정확(0.00 동결 20.0/25.9, swet spot 0.05~0.10); PEcore 페어링 오기(29.4=PEcore-B) → 세션 중 정정 |
+| Q4-2 | 93 | cosine VQA +2.3 예외·VICReg/SIGReg 보류 원문 확인; rank-k 미보장 논증은 정확한 학술 해석 |
+| Q5-1 | 95 | WP-WM 65.7 + §4.4 anticipation 전 행(34.2/26.0/19.4/11.7 vs 32.7/23.4/15.9/7.1 · ViT-g 39.7) + 2.85× 전부 정확 |
+| Q5-2 | 90 | 연속 제어 인터페이스 부재 원문 확인(v2 §4.4도 이산 라벨); H-JEPA 위임은 프로그램 수준 정답 |
+| Q5-3 | 90 | "보상=외부 공급(후보+라벨)" 판별 protocol 인용 정확; 순환 비판 유효 범위 분리 정통 — ① 누락 채움(세션 중) |
+| Q5-4 | 93 | latency 동등 + decoupling 구조(§4.5) 원문 확인; "압도적" 접어 읽기 재해석 정통 — ①④ 누락 채움(세션 중) |
+
+**12문항 평균: 92.7%** — 오기 3건(하드네거티브 재배열 · PEcore 페어링 · v1 잔존 수치 1건) 세션 중 정정 완료, 구성 빈칸 3건(① ×2, ④ ×1) 보완 완료.
 
 > **출처**: arXiv 2512.10942 v2 (2026-02-02) §1–§5; **V-JEPA 2 (arXiv 2506.09985, §2.1·§2.2·§4)**, V-JEPA (arXiv 2404.08471, §3.2·Appendix C·Fig.8); Wang & Isola (2020); He et al. (2022) MAE; Assran et al. (2023) I-JEPA; Bordes et al. (2024) Guillotine Regularization; Zhou et al. (2025), Baldassarre et al. (2025), Terver et al. (2025); LeCun (2022).

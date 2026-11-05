@@ -106,4 +106,5 @@ Deformable DETR (2010.04159) · DAB-DETR (2201.12329) · DN-DETR (2203.01305) ·
 | 16 | **11/03** | I-JEPA / V-JEPA | ✅ |
 | 17 | **11/04** | V-JEPA 2 + World Model 종합 🏁 | ✅ |
 | — | 10/29–11/01 | **휴식** — D14 LLaVA-1.5 스킵 후 재충전 (2026-10-28 확정) | ✅ |
-| — | 11/04(목) | **자율 세션 — LLM 사후강화학습 논문 읽기 + 포스터** 🔥 (RLHF·DPO·GRPO 계열 — 10/28 이월) | ✅ |
+| — | 11/04(목) | **자율 세션 — LLM 사후강화학습 논문 읽기 + 포스터** 🔥 (RLHF·DPO·GRPO 계열 — 10/28 이월) | ✅ 완료 (11/04 — InstructGPT 2203.02155 · DPO 2305.18290 · GRPO 원전 DeepSeekMath 2402.03300 **3편 원문 직독**(ar5iv/arXiv HTML — 식(1)~(10) + 2402 식(1)~(4) + DPO Table 1 대조, ID abs 재검증) · `poster/factsheet_posttraining.md` 검증 팩트시트 + `poster/poster_posttraining_space.html` 9카드(**QA PASS** — 크리스마스 골드 스트링라이트 + 겨울밤 하늘, 수평선 서니셋·팔머 살짝 비치 터치 — 2026-11-04 사용자 지정 테마) · A1L/A0L PDF+PNG 4종 · 라이브러리니안 팩트시트 2건 타임아웃 → **curl+파싱 원문 직접 추출 전환**으로 정정) |
+| — | 후보 | **SparseDrive** (2405.19620) — 자율주행 E2E 다음 세션 예약 (2026-11-04 사용자 승확정) — sparse 표현 전환 + 병렬 motion planner + collision-aware rescore · Xuewu Lin 계보(D9 Sparse4D 후속) · RLHF 포스터 세션 뒤 편성 | 🗓 예약 |

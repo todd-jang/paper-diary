@@ -34,7 +34,7 @@ PAGE_MM = {
 MM_TO_PX = 96.0 / 25.4
 
 
-def export(html_name: str, size: str, tag: str, png_only: bool) -> list:
+def export(html_name: str, size: str, tag: str, png_only: bool, no_a1_overrides: bool = False) -> list:
     w_mm, h_mm = PAGE_MM[size]
     src = os.path.join(HERE, html_name)
     if not os.path.exists(src):
@@ -80,7 +80,7 @@ def export(html_name: str, size: str, tag: str, png_only: bool) -> list:
                            min-height: {PAGE_MM["A0"][1]}mm !important;
                            zoom: {poster_scale:.8f} !important; }}
             """)
-        if a1_layout:
+        if a1_layout and not no_a1_overrides:
             page.add_style_tag(content=a1_layout)
         page.wait_for_timeout(600)  # let fonts/images settle
         if not png_only:
@@ -100,9 +100,11 @@ def main() -> None:
     ap.add_argument("--size", default="A1", choices=list(PAGE_MM))
     ap.add_argument("--tag", default="en")
     ap.add_argument("--png-only", action="store_true")
+    ap.add_argument("--no-a1-overrides", action="store_true",
+                    help="skip the legacy A1 typography injection (posters carrying their own final layout)")
     args = ap.parse_args()
     print(f"[export] {args.html} -> {args.size} ({PAGE_MM[args.size][0]}x{PAGE_MM[args.size][1]} mm)")
-    export(args.html, args.size, args.tag, args.png_only)
+    export(args.html, args.size, args.tag, args.png_only, args.no_a1_overrides)
 
 
 if __name__ == "__main__":

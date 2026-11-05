@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Post-Training LLMs — RLHF · DPO · GRPO · Marquee (A-series portrait)</title>
+  <link rel="stylesheet" href="poster_space.css">
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════════
+       Marquee template match (PosterPresentations.com A1 Marquee, portrait)
+       · sheet:  A-series portrait, designed at A0 (841 × 1189 mm)
+       · colors: template theme (accent6 bg #DF5327, accent5 gold, cream panels)
+       · garnish: Christmas string-lights + snow + beach horizon (CSS only)
+       ═══════════════════════════════════════════════════════════════════════ */
+    :root {
+      --marquee: #df5327;        /* template accent6 (master bg) */
+      --marquee-deep: #b8401b;
+      --paper: #fffaf3;
+      --paper-ink: #3d2a1d;
+      --paper-dim: #6b5647;
+      --bar: #fff3e2;            /* section header bar */
+      --bar-ink: #a03714;
+      --gold: #e6b84f;
+      --gold-deep: #b8892b;
+      --xmas-red: #d1495b;
+      --xmas-green: #4f9d7a;
+      --sand: #f3e2c3;
+      --sunset: #e8825f;
+      --rule: rgba(160, 55, 20, .18);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--marquee-deep); }
+    body { font-family: Calibri, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--paper-ink); }
+    /* disable the space-theme star/grid overlays */
+    body::before, body::after { display: none !important; }
+
+    .poster {
+      position: relative;
+      width: 841mm;
+      height: 1189mm;
+      margin: 0 auto;
+      padding: 14mm 18mm 16mm;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 7mm;
+      background:
+        /* string-lights: gold dots across the top */
+        radial-gradient(circle 1.6mm at 6% 1.4%,  var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 15% 2.2%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 25% 1.3%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 35% 2.1%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 45% 1.4%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 55% 2.2%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 65% 1.3%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 75% 2.1%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 85% 1.4%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        radial-gradient(circle 1.6mm at 94% 2.2%, var(--gold) 0 1.2mm, transparent 1.3mm),
+        /* snow drifting down the red */
+        radial-gradient(circle .7mm at 12% 11%,  #ffffffcc 0 .55mm, transparent .6mm),
+        radial-gradient(circle .55mm at 28% 7%,  #ffffff99 0 .42mm, transparent .5mm),
+        radial-gradient(circle .7mm at 55% 9%,   #ffffffb3 0 .55mm, transparent .6mm),
+        radial-gradient(circle .55mm at 72% 6%,  #ffffff88 0 .42mm, transparent .5mm),
+        radial-gradient(circle .7mm at 88% 10%,  #ffffffcc 0 .55mm, transparent .6mm),
+        radial-gradient(circle .55mm at 40% 16%, #ffffff99 0 .42mm, transparent .5mm),
+        /* ── beach: blurred sunset horizon + sand at the very bottom ── */
+        linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 88%, rgba(232,130,95,.30) 95%, rgba(243,226,195,.38) 99%),
+        linear-gradient(180deg, var(--marquee) 0%, var(--marquee) 70%, var(--marquee-deep) 100%);
+    }
+
+    /* ── masthead: centered title / authors / affiliations (template order) ── */
+    .masthead { text-align: center; color: #fff4ea; padding-top: 6mm; }
+    .masthead .eyebrow {
+      font-size: 11.5pt; letter-spacing: .24em; text-transform: uppercase;
+      color: #ffe9b8; margin: 0 0 2.4mm;
+    }
+    .masthead h1 {
+      margin: 0 auto; max-width: 560mm;
+      font-size: 43pt; line-height: 1.12; font-weight: 700; letter-spacing: -.005em;
+      text-shadow: 0 .6mm 2.4mm rgba(90, 24, 4, .35);
+    }
+    .masthead h1 em { font-style: normal; color: var(--gold); }
+    .masthead .authors { margin: 3.4mm 0 0; font-size: 19pt; font-weight: 700; color: #ffffff; }
+    .masthead .authors b { color: var(--gold); }
+    .masthead .affil {
+      margin: 2mm auto 0; max-width: 640mm;
+      font-size: 12pt; line-height: 1.45; color: #ffe1cd;
+    }
+    .masthead .affil b { color: #fff3d9; }
+
+    /* ── two-column body (template: 28cm gutters ~0.9, margins ~1.2 on A1) ── */
+    .columns {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8mm 11mm;
+      align-content: start;
+    }
+    .col { min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 8mm; }
+
+    /* section header bar (template: caps label above body) */
+    .sec h2 {
+      margin: 0 0 2.6mm;
+      padding: 2.8mm 5mm;
+      border-radius: 2mm;
+      background: var(--bar);
+      color: var(--bar-ink);
+      font-size: 18pt; line-height: 1.15;
+      letter-spacing: .10em; text-transform: uppercase;
+      border-bottom: 1.4mm solid var(--gold);
+      box-shadow: 0 .8mm 3mm rgba(90, 24, 4, .18);
+    }
+    .sec h2 small { float: right; font-size: 9.8pt; letter-spacing: .06em; color: #8a6a52; }
+
+    /* cream panel body */
+    .card {
+      min-width: 0;
+      display: flex; flex-direction: column;
+      padding: 5.6mm 6mm;
+      border-radius: 3mm;
+      background: var(--paper);
+      border: .3mm solid rgba(160, 55, 20, .22);
+      box-shadow: 0 2mm 6mm rgba(90, 24, 4, .16);
+    }
+    .card p, .card li { margin: 0 0 2.3mm; font-size: 16pt; line-height: 1.52; color: var(--paper-ink); }
+    .card p b, .card li b { color: #7c2d0e; }
+    .card p strong { color: #a03714; }
+    .card h3 { margin: 3mm 0 1.5mm; font-size: 16pt; color: var(--bar-ink); }
+    .card .tag {
+      display: inline-block; margin: 0 1.4mm 2mm 0;
+      padding: .9mm 2.8mm; border-radius: 5mm;
+      font-size: 11.5pt; font-weight: 700; letter-spacing: .04em;
+      color: #fff; background: var(--xmas-green);
+    }
+    .card .tag.gold  { background: var(--gold); color: #3d2a1d; }
+    .card .tag.coral { background: var(--xmas-red); }
+    .card .tag.marquee { background: var(--bar-ink); }
+
+    /* figures · tables */
+    .card table { width: 100%; border-collapse: collapse; font-size: 15pt; margin: 1.2mm 0 2.4mm; }
+    .card th {
+      text-align: left; padding: 1.4mm 2mm;
+      font-size: 12.6pt; letter-spacing: .08em; text-transform: uppercase;
+      color: #8a5a38; border-bottom: .5mm solid rgba(160, 55, 20, .35);
+      background: rgba(230, 184, 79, .16);
+    }
+    .card td { padding: 1.4mm 2mm; color: var(--paper-ink); border-bottom: .3mm solid var(--rule); }
+    .card tr:last-child td { border-bottom: none; }
+    .card td.hi { color: #a03714; font-weight: 700; }
+
+    .figure-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; margin: 1mm 0 1.6mm; }
+    .figure-row figure { margin: 0; }
+    .figure-row img { width: 100%; height: 30mm; object-fit: contain; background: #fff; border-radius: 2mm; border: .3mm solid var(--rule); padding: 1mm; }
+    .figure-row figcaption { margin-top: 1.2mm; font-size: 9.9pt; line-height: 1.35; color: var(--paper-dim); }
+    .figure-row figcaption b { color: #a03714; }
+
+    /* formula blocks */
+    .formula {
+      margin: 1.7mm 0;
+      padding: 2.4mm 3.4mm;
+      border-radius: 2.4mm;
+      background: rgba(230, 184, 79, .17);
+      border-left: 1.5mm solid var(--gold-deep);
+      font-size: 18pt; line-height: 1.55;
+      color: #4a2c12; text-align: center;
+    }
+    .formula small { display: block; margin-top: 1.2mm; font-size: 12.5pt; color: #8a5a38; }
+
+    /* flow strips */
+    .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 1.6mm; margin: 1.6mm 0 2mm; }
+    .flow .node {
+      padding: 2.2mm 2.4mm; border-radius: 2.4mm;
+      font-size: 12.8pt; line-height: 1.3; text-align: center;
+      font-weight: 700; color: #3d2a1d;
+      background: var(--sand); border: .35mm solid rgba(184, 137, 43, .45);
+    }
+    .flow .node em { font-style: normal; color: #a03714; }
+    .flow .arrow { color: #a03714; font-size: 14pt; text-align: center; }
+    .flow.wide { grid-template-columns: 1fr auto 1fr auto 1fr; }
+
+    /* stat grid */
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2.6mm; margin: 1mm 0 2mm; }
+    .stats.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stat { padding: 3mm 3.4mm; border-radius: 3mm; background: rgba(230, 184, 79, .13); border: .3mm solid rgba(184, 137, 43, .3); }
+    .stat b { display: block;       font-size: 23pt; line-height: 1.05; color: #a03714; }
+    .stat:nth-child(2) b { color: var(--xmas-red); }
+    .stat:nth-child(3) b { color: var(--xmas-green); }
+    .stat:nth-child(4) b { color: var(--gold-deep); }
+    .stat span { display: block; margin-top: 1.6mm; font-size: 12.4pt; line-height: 1.32; color: var(--paper-dim); }
+
+    /* journey strip */
+    .journey {
+      display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 2mm;
+      padding: 2.6mm 3.6mm; border-radius: 3mm;
+      background: rgba(255, 244, 234, .16); border: .3mm solid rgba(255, 236, 214, .35);
+      margin: 0 0 2.4mm;
+    }
+    .journey div b { display: block; font-size: 15pt; color: #ffffff; }
+    .journey div span { display: block; margin-top: .8mm; font-size: 12.4pt; line-height: 1.3; color: #ffdcC6; }
+    .journey .arrow { color: var(--gold); font-size: 19pt; font-weight: 700; }
+    /* journey inside a cream card: swap to dark-on-gold */
+    .card .journey { background: rgba(230, 184, 79, .16); border: .3mm solid rgba(184, 137, 43, .35); }
+    .card .journey div b { color: #a03714; }
+    .card .journey div span { color: #6b5647; }
+    .card .journey .arrow { color: var(--gold-deep); }
+
+    /* ── the academic-commentary block ("논문식" 해설) ── */
+    .comment {
+      margin: 1.2mm 0 1.6mm;
+      padding: 2.8mm 3.8mm;
+      border-left: 1.6mm solid var(--xmas-green);
+      border-radius: 0 2.4mm 2.4mm 0;
+      background: rgba(79, 157, 122, .10);
+      font-size: 15.2pt; line-height: 1.52;
+      color: #3f4a2e;
+      font-style: italic;
+    }
+    .comment::before {
+      content: "Commentary — ";
+      font-style: normal; font-weight: 700; letter-spacing: .06em;
+      color: #3e7055; font-size: 12.2pt; text-transform: uppercase;
+    }
+    .comment b { color: #2f5a44; }
+
+    /* reference list */
+    .refs { margin: 0; padding: 0 0 0 5mm; }
+    .refs li { margin-bottom: 2mm; font-size: 14pt; line-height: 1.45; }
+    .refs li b { color: #7c2d0e; }
+    .refs .mono { white-space: nowrap; color: #a03714; font-weight: 700; }
+
+    /* corner glyphs */
+    .beach {
+      position: absolute; right: 6mm; bottom: 3mm;
+      font-size: 14pt; opacity: .5; letter-spacing: 1.4mm; z-index: 2;
+    }
+    .snowglobe {
+      position: absolute; left: 6mm; bottom: 3mm;
+      font-size: 14pt; opacity: .5; z-index: 2;
+    }
+
+    /* footnote strip anchored at the bottom of both columns */
+    .baseline {
+      grid-column: 1 / -1;
+      margin-top: auto;
+      text-align: center;
+      font-size: 12.5pt; line-height: 1.42;
+      color: #ffe1cd;
+      padding-top: 2mm;
+    }
+    .baseline b { color: #fff3d9; }
+  </style>
+</head>
+<body>
+  <main class="poster">
+
+    <!-- ══════════ MASTHEAD ══════════ -->
+    <header class="masthead">
+      <p class="eyebrow">Paper-Diary · 자율 세션 11/04 · Post-Training Trio 🎄🌴</p>
+      <h1>Post-Training Language Models:<br>Three Ways to Say <em>"Follow the Preference"</em> — RLHF · DPO · GRPO</h1>
+      <p class="authors">Ouyang et al. 2022 (InstructGPT) &nbsp;·&nbsp; Rafailov et al. 2023 (DPO) &nbsp;·&nbsp; Shao et al. 2024 (DeepSeekMath §4.1, GRPO)</p>
+      <p class="affil">
+        Written as an autonomous paper-diary session · <b>2203.02155</b> (NeurIPS 2022) · <b>2305.18290</b> (NeurIPS 2023 Oral) · <b>2402.03300</b> (GRPO 원전)<br>
+        모든 식·표·수치는 두 식 HTML(ar5iv/arXiv) 원문 직독으로 검증 — <b>factsheet_posttraining.md</b> 참조 · 논문 ID abs 재검증 완료 ("ID 검증 원칙")
+      </p>
+    </header>
+
+    <!-- ══════════ TWO-COLUMN MARQUEE BODY ══════════ -->
+    <section class="columns">
+
+      <!-- ───────── LEFT COLUMN ───────── -->
+      <div class="col">
+
+        <section class="sec">
+          <h2>Introduction <small>or abstract</small></h2>
+          <div class="card">
+            <p><b>동기</b> — 대규모 언어모델은 다음 토큰 예측이라는 단일 통계적 목적으로 학습되지만, 이 목적은 "사람이 원하는 답"과 동일하지 않다. InstructGPT는 이 격차를 명시적으로 지목했다: <strong>"aligning with user intent on a learned reward model while staying computationally feasible and predictable"</strong>(§1). 본 포스터는 사후강화학습(post-training)의 3편 — 명시적 RM+PPO(RLHF), 재매개화에 의한 직접 선호최적화(DPO), critic 없는 그룹상대 정책 최적화(GRPO) — 이 <b>같은 KL-제약 선호최대화 문제에 대한 3가지 판단</b>임을 대조한다.</p>
+            <div class="journey">
+              <div><b>2022</b><span>InstructGPT · RLHF 원형</span></div><span class="arrow">›</span>
+              <div><b>2023</b><span>DPO · 정책 = 암묵보상</span></div><span class="arrow">›</span>
+              <div><b>2024</b><span>GRPO · critic 없는 PPO</span></div>
+            </div>
+            <div class="stats">
+              <div class="stat"><b>85 ± 3%</b><span>175B InstructGPT &gt; GPT-3 175B 선호율 (§4)</span></div>
+              <div class="stat"><b>61 / 57%</b><span>DPO vs PPO · TL;DR 승률 GPT-4 평가 (§6.2)</span></div>
+              <div class="stat"><b>46.8→51.7</b><span>GRPO · MATH 상승폭 (DeepSeekMath §4.2)</span></div>
+              <div class="stat"><b>3 논문</b><span>2203.02155 · 2305.18290 · 2402.03300 abs 검증</span></div>
+            </div>
+            <div class="comment">세 논문은 서로 다른 해법을 내놓았지만 문제 정식화는 하나로 수렴한다. 선호 데이터 y_w ≻ y_l을 <b>어디에 적용하는가</b>(보상모델 vs 정책손실), <b>어디에 KL을 걸리는가</b>(보상항 vs 손실표), <b>value를 누가 대신하는가</b>(critic 모델 vs 그룹 통계) — 이 세 축이 사후강화학습 2년(2022→2024)의 구조적 계보를 결정한다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Objectives <small>연구 목적 3제</small></h2>
+          <div class="card">
+            <p><span class="tag gold">O1</span><b>정합(Alignment)</b> — InstructGPT: 인간 의도에 맞추되 계산 가능성·예측 가능성을 유지하는 3단 레시피(SFT→RM→PPO)의 확립 (§1, §3).</p>
+            <p><span class="tag gold">O2</span><b>경제성(Efficiency)</b> — DPO: 보상모델 피팅·온라인 샘플링·하이퍼파라미터 튜닝이라는 RLHF의 3대 부담을 재매개화로 제거(초록, §6.1).</p>
+            <p><span class="tag gold">O3</span><b>확장성(Scalability)</b> — GRPO: 정책과 맞먹는 크기의 value/critic 모델을 그룹 통계로 대체해 RL을 대형모델에 맞춘다(§4.1.1–4.1.2).</p>
+            <div class="comment">세 목적은 교대로 상대를 비판한다: RLHF의 비용을 DPO가 지적하고, DPO의 오프라인 한계를 GRPO가 온라인 RL 선으로 되돌린다. 심층적으로 보면 <b>O1→O3는 "표현" → "손실" → "샘플링"의 관점 이동</b>이며, 어느 하나도 이전 단계의 수치적 정상성을 부정하지 않는다 — 동일 기준선 위에서의 판단 변경이다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Method I · InstructGPT <small>2203.02155</small></h2>
+          <div class="card">
+            <span class="tag coral">pipeline</span><span class="tag gold">식(1)·식(2)</span><span class="tag">§3 §4</span>
+            <h3>레시피 — 고정 환경은 배질(bandit)</h3>
+            <p>프롬프트 제시 → 응답 생성 → RM 보상(§3.5). Steps 2–3을 반복 수집한다.</p>
+            <div class="flow wide">
+              <div class="node">SFT<br><em>시연 13k</em></div><span class="arrow">›</span>
+              <div class="node">RM<br><em>비교 33k</em></div><span class="arrow">›</span>
+              <div class="node">PPO<br><em>프롬프트 31k</em></div>
+            </div>
+            <table>
+              <thead><tr><th>항목</th><th>값 (원문)</th></tr></thead>
+              <tbody>
+                <tr><td>라벨러</td><td>contractor ~40명 (§3.4)</td></tr>
+                <tr><td>모델</td><td>1.3B / 6B / 175B — GPT-3 아키텍처</td></tr>
+                <tr><td>SFT</td><td><b>16 epochs</b> · 코사인 LR · dropout 0.2</td></tr>
+                <tr><td>RM</td><td><b>6B만</b> — 175B RM은 불안정(부록 C.2)</td></tr>
+                <tr><td>라벨러 동의</td><td>72.6% · hold-out 77.3%</td></tr>
+              </tbody>
+            </table>
+            <div class="formula">loss(θ) = −(1/C(K,2)) · E<sub>(x,y_w,y_l)</sub>[ log σ( r_θ(x,y_w) − r_θ(x,y_l) ) ]<small>식(1) — 보상모델 손실. K=4..9의 (K choose 2) 비교를 배치 1단위로.</small></div>
+            <div class="formula">objective(φ) = E<sub>(x,y)</sub>[ r_θ(x,y) − β·log( π_RL(y|x) / π_SFT(y|x) ) ] + γ·E<sub>pretrain</sub>[ log π<sub>RL</sub>(x) ]<small>식(2) — PPO-ptx. γ=0 순수 PPO · γ&gt;0이 PPO-ptx.</small></div>
+            <p><b>결과</b> — 진실성: TruthfulQA 참·정보성 회답 <b>약 2×</b> (§4.4). 폐쇄도메인 환각 <b>21% vs 41%</b> (절반 이하, §4.3). 독성 <b>~25% 감소</b> (§4.5). SFT 기본선 대비 승률 <b>73.4%</b> (T0 26.8% / FLAN 29.8%) — 실용성 1.3B 모델도 175B GPT-3를 능가(§1).</p>
+            <div class="comment">식(2)의 γ항은 <b>공개 NLP(SQuAD·DROP·HellaSwag·WMT-FR) 성능 저하 — 이른바 alignment tax — 를 되돌리는 안전판</b>이다(§4.2). 또한 RM에 per-token KL(SFT 대비)을 심어(식 2 중간항) <b>보상모델 과최적화(overoptimization)를 완화</b>한다. RLHF가 "RL이라는 형식"보다 <b>제약의 배치</b>를 설계의 핵심으로 본다는 점이 이 시절의 지적 유산이다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Method II · DPO <small>2305.18290</small></h2>
+          <div class="card">
+            <span class="tag coral">derivation</span><span class="tag gold">식(4)~식(7)</span><span class="tag">Theorem 1</span>
+            <h3>분할함수를 죽이는 3식 — 정책이 곧 암묵적 보상</h3>
+            <p>식(4) 도출된 목적의 수렴값 → 식(5) 재매개화 → 식(6)에서 <b>Z(x) 소멸</b>:</p>
+            <div class="formula">π_r(y|x) = (1/Z(x)) π_ref(y|x) exp( r(x,y)/β ) &nbsp;·&nbsp; r(x,y) = β·log( π_r(y|x)/π_ref(y|x) ) + β·log Z(x)<small>식(4), 식(5) — Bradley-Terry 사교(예3)의 보상을 정책비율로 재표현.</small></div>
+            <div class="formula"><b>L<sub>DPO</sub>(π_θ; π_ref) = − E[ log σ( β·log( π_θ(y_w|x)/π_ref(y_w|x) ) − β·log( π_θ(y_l|x)/π_ref(y_l|x) ) ) ]</b><small>식(7) — 분할함수가 소멸(식6)하며 RL 없는 이항분류 손실로 수렴.</small></div>
+            <p>기울기 해설: σ항이 <b>암묵적 보상이 잘못 매긴 예에 큰 가중</b>을 실어 상승시킨다 — 이 가중을 떼면(또는 상수 페널티로 두면) LM 퇴화가 관찰된다(§5.1). <b>Theorem 1</b>: 등가클래스의 모든 보상은 이 재매개화로 표현된다 — 일반성 손실 0 (§5.1).</p>
+            <div class="comment">DPO의 지적 위치는 <b>"RLHF의 사용이 낭비가 아니라 인프라"</b>라는 두뇌였다: Reward pred. fitting → sampling → tuning의 3단 인프라가 사라지므로 <b>동일 6B 규모에서 학습이 안정적·훨씬 가볍다</b>. 대가는 샘플링 문맥이 학습 내로 등장하지 않는다는 것 — 온라인 갱신이 필요한 문제는 GRPO에게 넘겨질 분기를 선언한 셈이다.</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ───────── RIGHT COLUMN ───────── -->
+      <div class="col">
+
+        <section class="sec">
+          <h2>Method III · GRPO <small>2402.03300 §4.1 · 원전</small></h2>
+          <div class="card">
+            <span class="tag coral">critic → 그룹통계</span><span class="tag gold">식(2)~식(4)</span><span class="tag">Alg. 1</span>
+            <h3>PPO는 살아 있되 critic을 유리 위에 올려놓지 않는다</h3>
+            <p><b>문제</b> — PPO의 value/critic은 <b>정책과 맞먹는 크기</b>의 별도 모델(메모리·계산 부담) + RM은 <b>마지막 토큰만</b> 보상하므로 토큰별 value 학습이 어렵다(Fig. 4). KL 항은 PPO의 per-token 식(2)를 그대로 유지(InstructGPT → Ouyang 계승):</p>
+            <div class="formula">r_t = r_φ(q, o<sub>≤t</sub>) − β·log( π_θ(o_t|…) / π_ref(o_t|…) )<small>식(2) — DeepSeekMath §4.1. InstructGPT의 per-token KL과 동일 계통.</small></div>
+            <div class="flow wide">
+              <div class="node">질문 q</div><span class="arrow">→</span>
+              <div class="node">그룹 {o<sub>1</sub>…o<sub>G</sub>} 샘플</div><span class="arrow">→</span>
+              <div class="node">mean(r)·std(r) 정규화 → Â<sub>i,t</sub></div>
+            </div>
+            <div class="formula">Â<sub>i,t</sub> = r̃<sub>i</sub> = ( r_i − mean( r<sub>1..G</sub> ) ) / std( r<sub>1..G</sub> )<small>§4.1.2 — outcome supervision. value/critic 학습이 불요 · 그룹 상대평가는 "비교로 학습되는 RM의 성격과 정합"(§4.1.1).</small></div>
+            <div class="formula">J<sub>GRPO</sub>(θ) = E[ (1/G)Σ<sub>i</sub> (1/|o_i|)Σ<sub>t</sub> { min[ ρÂ<sub>i,t</sub>, clip(ρ, 1−ε, 1+ε)Â<sub>i,t</sub> ] − β·D<sub>KL</sub>[π_θ‖π_ref] } ]<small>식(3) — KL을 보상이 아니라 <b>손실에 직접</b>: advantage 계산을 단순하게 유지.</small></div>
+            <div class="formula">D<sub>KL</sub>[π_θ‖π_ref] = π_ref/π_θ − log( π_ref/π_θ ) − 1<small>식(4) — Schulman(2020)의 <b>불편추정량(always positive)</b>.</small></div>
+            <p><b>Algorithm 1 (Iterative GRPO)</b> — 매 반복(I): π_ref 갱신 → M 스텝 × <b>μ회 GRPO</b> 업데이트 → RM은 <b>replay</b>로 계속 학습(§4.1.3).</p>
+            <div class="comment">GRPO의 세부는 <b>"advantage의 정의를 데이터 구조로 바꾼 것"</b>이다. critic이 였던 편향 추정을 <b>같은 질문에 대한 G개 샘플의 z-정규화</b>로 대체하면, value 헤드라는 별도 개체가 프로그래밍적으로 소멸한다. 단순화가 아니라 <b>불편추정량(식4)·클리핑 목적식(식3)·loss-side KL</b>의 조합으로 안정성을 재확보한다는 점이 원문의 설명 방식이다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Results <small>DPO Table 1 · DeepSeekMath §4.2</small></h2>
+          <div class="card">
+            <span class="tag">DPO · 인간 평가</span><span class="tag gold">Table 1</span>
+            <table>
+              <thead><tr><th>승률 (%)</th><th>DPO</th><th>SFT</th><th>PPO-1</th></tr></thead>
+              <tbody>
+                <tr><td><b>Table 1</b> 인간</td><td class="hi">58</td><td>43</td><td>17</td></tr>
+                <tr><td>GPT-4(Summary)</td><td class="hi">47</td><td>27</td><td>13</td></tr>
+                <tr><td>GPT-4–인간 동의율</td><td class="hi">70</td><td colspan="2" style="text-align:center;">인간–인간 65</td></tr>
+              </tbody>
+            </table>
+            <div class="stats compact">
+              <div class="stat"><b>61%</b><span>TL;DR 승률 · T=0.0 (PPO 최적 57%, GPT-J 6B)</span></div>
+              <div class="stat"><b>58%</b><span>인간 DPO(T=.25) &gt; PPO(T=0)</span></div>
+              <div class="stat"><b>128</b><span>Best-of-128과 동등 이상(HH)</span></div>
+            </div>
+            <table>
+              <thead><tr><th>DeepSeekMath 7B</th><th>GSM8K</th><th>MATH</th><th>CMATH</th></tr></thead>
+              <tbody>
+                <tr><td><b>Base</b></td><td>64.2</td><td>36.2</td><td>—</td></tr>
+                <tr><td><b>Instruct</b></td><td>82.9</td><td>46.8</td><td>84.6</td></tr>
+                <tr><td><b>RL</b> (GRPO)</td><td class="hi">88.2</td><td class="hi">51.7</td><td class="hi">88.8</td></tr>
+              </tbody>
+            </table>
+            <p><b>GRPO RL 페이즈</b>는 <b>영어 instruction 서브셋만</b>으로 진행 — out-of-domain(CMATH)까지 상승(§4.2). MATH <b>51.7%</b>를 외부 도구·투표 없이; 셀프커시스턴시(SC@64) <b>60.9%</b>. 사전학습은 DeepSeek-Coder-Base-v1.5 7B + <b>120B math tokens</b>(Minerva 대비 <b>7×</b>, OpenWebMath 대비 <b>9×</b>).</p>
+            <div class="comment">두 결과표의 비교 기준은 다른 과제이지만 통제 매개는 같다 — <b>유사 규모(≤6B / 7B), 동일 기본 모델, 상대법 평가</b>. DPO의 숫자는 <b>샘플링 문맥 없이도 PPO에 필적하는 승률이 나온다</b>는 정상성 증명이고, GRPO의 숫자는 <b>critic 없이도 RL 계열의 상승이 보존된다</b>는 정상성 증명이다. 즉 두 논문의 수치는 상대를 이기려는 계산이 아니라 서로 다른 갈래의 존재 근거로 읽는 것이 정확하다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Synthesis <small>같은 문제 · 다른 구조</small></h2>
+          <div class="card">
+            <table>
+              <thead><tr><th>항목</th><th>InstructGPT</th><th>DPO</th><th>GRPO</th></tr></thead>
+              <tbody>
+                <tr><td>보상모델</td><td>명시적 (6B)</td><td><b>암묵적 (Thm. 1)</b></td><td>명시적 — critic 없음</td></tr>
+                <tr><td>온라인 샘플링</td><td>필요</td><td><b>불요</b></td><td>필요 (그룹 G개)</td></tr>
+                <tr><td>KL 제약 위치</td><td>보상에 per-token</td><td>목적식 내장(식7)</td><td><b>손실에 직접(식3)</b></td></tr>
+                <tr><td>anchor 수치</td><td>85±3% 선호율</td><td>TL;DR 61 vs 57</td><td>MATH 46.8→51.7</td></tr>
+              </tbody>
+            </table>
+            <p><b>대응 관계</b> — 선호 학습을 <b>오프라인 이진분류로 접은 갈래</b>(DPO) ↔ <b>온라인 RL은 살리되 critic 제거로 비용을 낮춘 갈래</b>(GRPO). DeepSeekMath의 통합 관점(§5.2.1): <b>RFT · DPO · PPO · GRPO는 전부 "직접 또는 단순화된 RL"</b>의 한 지점이다.</p>
+            <div class="comment">관찰적으로 세 논문은 하나의 연속선 위에 있다: 명시적 RM+PPO가 기준선, DPO가 <b>재매개화 정리</b>로 정책=보상의 등가성을 증명해 데스크톱 규모까지 끌어내리고, GRPO가 <b>샘플 구조의 재정의</b>로 온라인 RL의 스케일 경제학을 회복한다. 이 분지는 DeepSeek-R1(2501.12948 · Day06 기록)의 규칙보상 GRPO로 연결 — 본 카드는 <b>원전 DeepSeekMath §4.1 기준</b>으로 R1과의 중복을 피했다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Conclusions</h2>
+          <div class="card">
+            <p><b>1.</b> 사후강화학습의 3편은 같은 KL-제약 선호최대화 문제의 <b>구조적으로 다른 3개 대안</b>이며, 어느 승자도 아니다 — DPO는 식(6)–(7)로, GRPO는 식(3)–(4)로, 각자 <b>죽여야 할 개체(critic, 분할함수)</b>를 지목했다.</p>
+            <p><b>2.</b> <b>제약의 배치</b>가 설계의 본질이다: KL이 보상에 있으면(식2) value의 학습 불안정성이 위임되고, 손실에 직접 있으면(식3) advantage가 단순해진다. DPO의 내장 KL은 이 논리의 극단(개체 0개)이다.</p>
+            <p><b>3.</b> 실무적 종착점은 2025년 R1이다: 수학에 맞춘 상대 평가의 성공은 <b>검증 가능한 규칙보상</b>으로 확장되어 일반 추론에 이르며, 본 세션의 원전 우선 원칙은 이 연결을 팩트시트에 명문화했다.</p>
+    <div class="comment">유식하게 말하면: 3편은 <b>동일 목적식 위의 세 가지 설계 지점</b> — 정규화항의 위치(KL), 보상의 존재론적 지위(명시/암묵), advantage의 데이터 출처(critic/그룹) — 을 어떻게 재배치했는가의 기록이다. 앞으로의 질문은 "RL을 떼어내는가"가 아니라 <b>"어떤 통계량이 advantage를 잘 추정하는가"</b>로 이동하고 있다.</div>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>References <small>abs 재검증 완료</small></h2>
+          <div class="card">
+            <ol class="refs">
+              <li>Ouyang, L. et al. <b>"Training language models to follow instructions with human feedback."</b> NeurIPS 2022. <span class="mono">arXiv:2203.02155</span></li>
+              <li>Rafailov, R. et al. <b>"Direct Preference Optimization: Your Language Model is Secretly a Reward Model."</b> NeurIPS 2023 (Oral). <span class="mono">arXiv:2305.18290</span></li>
+              <li>Shao, Z. et al. <b>"DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models."</b> §4.1 (GRPO 원전). <span class="mono">arXiv:2402.03300</span></li>
+              <li>DeepSeek-AI. <b>"DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning."</b> Day06 자율세션 기록. <span class="mono">arXiv:2501.12948</span></li>
+              <li>Schulman, J. et al. <b>KL Divergence Approximation</b> (2020) — DeepSeekMath 식(4)의 불편추정량 출처.</li>
+            </ol>
+          </div>
+        </section>
+
+        <section class="sec">
+          <h2>Acknowledgements · Contact <small>session meta</small></h2>
+          <div class="card">
+            <p><b>방법</b> — 라이브러리니안 병렬 검증 3건이 타임아웃 → ar5iv·arXiv HTML 원문을 curl 직접 파싱(식(1)~(10)·2402 식(1)~(4)·Table 1 대조)으로 전환, <b>factsheet_posttraining.md</b>에 팩트시트 확립. QA(qa_poster.py) PASS 후 세로 A-series PDF·PNG 수출.</p>
+            <p><b>인용 지표</b> — Semantic Scholar(2026-11-02): InstructGPT <b>25,614</b> · DPO <b>11,437</b> · DeepSeekMath <b>10,603</b> · 영향력 인용 2,541 / 2,369 / <b>3,104 — GRPO 원전이 1위</b>.</p>
+            <div class="comment">Ack — 이 세션은 Paper-Diary 자율세션 시리즈의 일부로, 수치 검증 규약(ID abs 재검증 · 미검증 인용 배제 · 원문 태그 유지)을 준수했다. 다음 예약 세션: <b>SparseDrive (2405.19620)</b> 자율주행 E2E.</div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <p class="baseline">
+      Artifacts: <b>factsheet_posttraining.md</b> · <b>poster_posttraining_space.html</b> (Marquee template match) · qa_poster.py PASS 후 A-series PDF·PNG 수출
+      &nbsp;•&nbsp; 모든 수치·식은 원문 대조 끝 (식(1)~(10) · 2402 식(1)~(4) · Table 1) &nbsp;•&nbsp; 크리스마스 &amp; 비치 테마 · CSS-only 🎄🌴
+    </p>
+
+    <div class="beach">🌴 🌊</div>
+    <div class="snowglobe">🎄 ❄️ 🌲</div>
+  </main>
+</body>
+</html>
